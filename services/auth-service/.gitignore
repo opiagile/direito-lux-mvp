@@ -1,0 +1,24 @@
+# Binários
+bin/
+tmp/
+
+# Logs
+*.log
+
+# Coverage
+coverage.out
+coverage.html
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
