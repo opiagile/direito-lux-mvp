@@ -14,7 +14,28 @@ import (
 
 // Logger middleware para logging de requisições
 func Logger(logger *zap.Logger) gin.HandlerFunc {
-	return gin.LoggerWithWriter(logger.Sugar().Desugar().Core())
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
+
+		c.Next()
+
+		latency := time.Since(start)
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		statusCode := c.Writer.Status()
+
+		logger.Info("HTTP Request",
+			zap.String("method", method),
+			zap.String("path", path),
+			zap.String("query", raw),
+			zap.String("ip", clientIP),
+			zap.Int("status", statusCode),
+			zap.Duration("latency", latency),
+			zap.String("user-agent", c.Request.UserAgent()),
+		)
+	}
 }
 
 // Recovery middleware para recuperação de panics

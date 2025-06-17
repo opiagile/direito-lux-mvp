@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"net/http"
-	"time"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,7 +14,7 @@ import (
 
 // Logger middleware para logging de requisições
 func Logger(logger *zap.Logger) gin.HandlerFunc {
-	return gin.LoggerWithWriter(logger.Sugar().Desugar().Core())
+	return gin.LoggerWithWriter(os.Stdout)
 }
 
 // Recovery middleware para recuperação de panics

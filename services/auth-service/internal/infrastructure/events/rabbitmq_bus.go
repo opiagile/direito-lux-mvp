@@ -2,11 +2,11 @@ package events
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
@@ -299,16 +299,16 @@ func (bus *RabbitMQEventBus) handleMessage(ctx context.Context, delivery amqp.De
 	// Extrair trace context
 	traceHeaders := make(map[string]string)
 	for k, v := range delivery.Headers {
-		if key, ok := k.(string); ok && len(key) > 6 && key[:6] == "trace_" {
+		if len(k) > 6 && k[:6] == "trace_" {
 			if value, ok := v.(string); ok {
-				traceHeaders[key[6:]] = value
+				traceHeaders[k[6:]] = value
 			}
 		}
 	}
 	
 	if len(traceHeaders) > 0 {
 		if spanCtx, err := tracing.ExtractHTTPHeaders(traceHeaders); err == nil {
-			span := tracing.StartSpan("message_handler", opentracing.ChildOf(spanCtx))
+			span := opentracing.StartSpan("message_handler", opentracing.ChildOf(spanCtx))
 			ctx = tracing.ContextWithSpan(ctx, span)
 			defer span.Finish()
 		}

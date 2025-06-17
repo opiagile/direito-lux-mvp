@@ -268,7 +268,7 @@ func isValidCNPJ(cnpj string) bool {
 	first := cnpj[0]
 	allSame := true
 	for _, digit := range cnpj {
-		if digit != first {
+		if byte(digit) != first {
 			allSame = false
 			break
 		}

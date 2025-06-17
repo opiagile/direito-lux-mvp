@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -190,10 +189,10 @@ func (s *TenantService) CreateTenant(ctx context.Context, req *CreateTenantReque
 	}
 
 	// Cria subscription inicial
-	subscription, err := s.createInitialSubscription(tenantID, req.PlanType)
-	if err != nil {
-		s.logger.Error("Failed to create initial subscription", zap.Error(err))
-		return nil, fmt.Errorf("erro ao criar assinatura inicial: %w", err)
+	_, subErr := s.createInitialSubscription(tenantID, req.PlanType)
+	if subErr != nil {
+		s.logger.Error("Failed to create initial subscription", zap.Error(subErr))
+		return nil, fmt.Errorf("erro ao criar assinatura inicial: %w", subErr)
 	}
 
 	// Cria quota usage inicial

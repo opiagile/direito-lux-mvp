@@ -117,24 +117,89 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
   - **Quotas**: Monitoramento de uso, incremento, verificações de limite
   - Sistema completo de multi-tenancy com isolamento de dados
 
+### 6. Process Service (Completo)
+- ✅ **services/process-service/** - Microserviço core de processos jurídicos com CQRS:
+  
+  **Domain Layer:**
+  - `process.go` - Entidade Process com validação CNJ e regras de negócio
+  - `movement.go` - Entidade Movement para andamentos processuais
+  - `party.go` - Entidade Party com validação CPF/CNPJ e dados de advogados
+  - `events.go` - 15 eventos de domínio para Event Sourcing completo
+  
+  **Application Layer - CQRS:**
+  - **Commands**: 15+ handlers (criar, atualizar, arquivar, monitorar, sincronizar)
+  - **Queries**: Handlers especializados (listagem, busca, dashboard, estatísticas)
+  - **Service**: Orquestrador principal com builders para facilitar uso
+  - **DTOs**: Read models otimizados para cada caso de uso
+  
+  **Infrastructure Layer:**
+  - **Repositórios PostgreSQL**: Queries complexas, filtros avançados, paginação
+  - **Event Publisher RabbitMQ**: Instrumentado, assíncrono, em lote
+  - **Configuração**: Sistema completo via env vars com validações
+  - **DI Container**: Setup automático com health checks e métricas
+  
+  **Migrações:**
+  - `001_create_processes_table.sql` - Tabela principal com triggers
+  - `002_create_movements_table.sql` - Movimentações com sequência automática
+  - `003_create_parties_table.sql` - Partes com validação de documentos
+  - `004_create_indexes.sql` - Índices otimizados (GIN, compostos, JSONB)
+  - `005_create_functions_and_triggers.sql` - Funções de negócio e triggers
+  - `006_seed_initial_data.sql` - Dados de exemplo e views
+  
+  **Recursos Avançados:**
+  - Validação automática de números CNJ
+  - Detecção automática de movimentações importantes
+  - Extração de palavras-chave por IA
+  - Busca textual full-text em português
+  - Estatísticas e analytics integrados
+  - CQRS + Event Sourcing completo
+
+### 7. DataJud Service (Completo)
+- ✅ **services/datajud-service/** - Microserviço de integração com API DataJud CNJ:
+  
+  **Domain Layer:**
+  - `cnpj_provider.go` - Entidade CNPJProvider com controle de quota diária (10k/dia)
+  - `cnpj_pool.go` - Pool de CNPJs com estratégias (round-robin, least-used, priority)
+  - `datajud_request.go` - Entidade DataJudRequest com tipos de consulta
+  - `rate_limiter.go` - Sistema de rate limiting multi-nível (CNPJ/tenant/global)
+  - `circuit_breaker.go` - Padrão Circuit Breaker para tolerância a falhas
+  - `cache.go` - Sistema de cache com TTL e evicção LRU
+  - `events.go` - 20+ eventos de domínio para auditoria completa
+  
+  **Application Layer:**
+  - `datajud_service.go` - Orquestrador principal com todos os padrões
+  - `cnpj_pool_manager.go` - Gerenciamento inteligente do pool de CNPJs
+  - `rate_limit_manager.go` - Controle de limites com janela deslizante
+  - `circuit_breaker_manager.go` - Gestão de estados e recuperação
+  - `cache_manager.go` - Cache distribuído com métricas
+  - `queue_manager.go` - Fila de prioridades com workers
+  - DTOs otimizados para cada tipo de consulta DataJud
+  
+  **Infrastructure Layer:**
+  - **Repositórios PostgreSQL**: 6 repositórios especializados
+  - **HTTP Client DataJud**: Cliente robusto com timeout e retry
+  - **Monitoring**: Métricas Prometheus completas
+  - **Configuration**: Sistema avançado de configuração
+  
+  **Migrações:**
+  - `001_create_cnpj_providers_table.sql` - Provedores CNPJ com triggers
+  - `002_create_datajud_requests_table.sql` - Requisições com validação CNJ
+  - `003_create_rate_limiters_table.sql` - Sistema de rate limiting
+  - `004_create_circuit_breakers_table.sql` - Circuit breakers com estatísticas
+  - `005_create_cache_and_events_tables.sql` - Cache e eventos de domínio
+  
+  **Recursos Avançados:**
+  - Pool de múltiplos CNPJs para ultrapassar limite de 10k consultas/dia
+  - Rate limiting inteligente com estratégias por nível
+  - Circuit breaker com recuperação automática
+  - Cache distribuído com TTL dinâmico
+  - Fila de prioridades com processamento assíncrono
+  - Monitoramento completo com Prometheus
+  - Tolerância a falhas e recuperação automática
+
 ## ❌ O que Falta Implementar
 
 ### 1. Microserviços Core
-
-
-#### Process Service
-- [ ] CRUD de processos jurídicos
-- [ ] Monitoramento automático
-- [ ] Histórico de movimentações
-- [ ] Cache inteligente
-- [ ] Implementação CQRS
-
-#### DataJud Service
-- [ ] Integração com API do CNJ
-- [ ] Circuit breaker e retry
-- [ ] Rate limiting (10k/dia)
-- [ ] Queue de requisições
-- [ ] Cache de consultas
 
 #### Notification Service
 - [ ] Integração WhatsApp Business API
@@ -236,8 +301,8 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 | Template de Microserviço | 100% | ✅ Completo |
 | Auth Service | 100% | ✅ Completo |
 | Tenant Service | 100% | ✅ Completo |
-| Process Service | 0% | 🔄 Próximo |
-| DataJud Service | 0% | ⏳ Pendente |
+| Process Service | 100% | ✅ Completo |
+| DataJud Service | 100% | ✅ Completo |
 | Notification Service | 0% | ⏳ Pendente |
 | AI Service | 0% | ⏳ Pendente |
 | Frontend | 0% | ⏳ Pendente |
@@ -246,20 +311,20 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 
 ## 🎯 Próximos Passos Recomendados
 
-1. **Implementar Process Service** - Core business logic com CQRS
-2. **Implementar DataJud Service** - Integração crítica com circuit breaker
-3. **Implementar Notification Service** - WhatsApp, Email, Telegram
+1. **Implementar Notification Service** - WhatsApp, Email, Telegram
+2. **Implementar AI Service** - Análise de documentos com Python/FastAPI
+3. **Implementar Search Service** - Elasticsearch para busca avançada
 4. **Configurar Kubernetes local** - Preparar para produção
 5. **Implementar CI/CD básico** - Automatizar builds
 
 ## 📊 Estimativa de Conclusão
 
 Baseado no roadmap de 14 semanas:
-- **Concluído**: Semanas 1-4 (Event Storming, Docker, Template, Auth, Tenant)
-- **Em andamento**: Semana 5 (Process Service)
-- **Restante**: 9 semanas de desenvolvimento + 1 semana de go-live
+- **Concluído**: Semanas 1-6 (Event Storming, Docker, Template, Auth, Tenant, Process, DataJud)
+- **Em andamento**: Semana 7 (Notification Service)
+- **Restante**: 7 semanas de desenvolvimento + 1 semana de go-live
 
-**Progresso Total**: ~35% do projeto completo
+**Progresso Total**: ~55% do projeto completo
 
 ### 🏆 Marcos Alcançados
 - ✅ **Multi-tenancy** - Sistema completo de isolamento e gerenciamento de tenants
@@ -267,3 +332,6 @@ Baseado no roadmap de 14 semanas:
 - ✅ **Gestão de Assinaturas** - Trials, renovações, mudanças de plano
 - ✅ **Controle de Quotas** - Monitoramento em tempo real de limites
 - ✅ **Event-Driven Architecture** - Base sólida para comunicação entre serviços
+- ✅ **CQRS + Event Sourcing** - Padrões avançados implementados no Process Service
+- ✅ **Integração DataJud** - Pool de CNPJs, rate limiting e circuit breaker
+- ✅ **Tolerância a Falhas** - Patterns resilientes com monitoramento

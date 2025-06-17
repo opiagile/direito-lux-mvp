@@ -68,8 +68,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	
 	user, err := h.userService.CreateUser(c.Request.Context(), req)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao criar usuário",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao criar usuário", err,
 			zap.String("email", req.Email),
 			zap.String("tenant_id", req.TenantID),
 			zap.String("operation", "create_user"),
@@ -181,8 +180,7 @@ func (h *UserHandler) GetUsersByTenant(c *gin.Context) {
 	
 	users, err := h.userService.GetUsersByTenant(c.Request.Context(), tenantID.(string), limit, offset)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao buscar usuários do tenant",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao buscar usuários do tenant", err,
 			zap.String("tenant_id", tenantID.(string)),
 			zap.String("operation", "get_users_by_tenant"),
 		)
@@ -226,8 +224,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	
 	user, err := h.userService.UpdateUser(c.Request.Context(), userID, req)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao atualizar usuário",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao atualizar usuário", err,
 			zap.String("user_id", userID),
 			zap.String("operation", "update_user"),
 		)
@@ -296,8 +293,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	
 	err := h.userService.ChangePassword(c.Request.Context(), userID.(string), req)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao alterar senha",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao alterar senha", err,
 			zap.String("user_id", userID.(string)),
 			zap.String("operation", "change_password"),
 		)
@@ -355,8 +351,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	
 	err := h.userService.DeleteUser(c.Request.Context(), userID)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao deletar usuário",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao deletar usuário", err,
 			zap.String("user_id", userID),
 			zap.String("operation", "delete_user"),
 		)

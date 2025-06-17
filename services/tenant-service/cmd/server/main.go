@@ -13,7 +13,6 @@ import (
 	"github.com/direito-lux/tenant-service/internal/infrastructure/events"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/http"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/logging"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/messaging"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/metrics"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/tracing"
 
@@ -77,7 +76,7 @@ func main() {
 			tracing.NewTracer,
 			metrics.NewMetrics,
 			database.NewConnection,
-			messaging.NewRabbitMQConnection,
+			
 			events.NewEventBus,
 		),
 

@@ -1,0 +1,47 @@
+# =============================================================================
+# Dockerfile de Desenvolvimento - Template Service
+# =============================================================================
+
+FROM golang:1.21-alpine
+
+# Instalar dependências de desenvolvimento
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    tzdata \
+    bash \
+    curl \
+    make
+
+# Instalar Air para live reload
+RUN go install github.com/cosmtrek/air@latest
+
+# Instalar outras ferramentas de desenvolvimento
+RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
+# Criar usuário de desenvolvimento
+RUN addgroup -g 1000 appgroup && \
+    adduser -D -s /bin/sh -u 1000 -G appgroup appuser
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Definir usuário
+USER appuser
+
+# Copiar go mod (se existir)
+COPY --chown=appuser:appgroup go.mod go.sum ./
+
+# Download das dependências (se go.mod existir)
+RUN if [ -f go.mod ]; then go mod download; fi
+
+# Expor porta
+EXPOSE 8080
+EXPOSE 9090
+
+# Volume para código fonte (será montado do host)
+VOLUME ["/app"]
+
+# Comando padrão (pode ser sobrescrito)
+CMD ["air", "-c", ".air.toml"]

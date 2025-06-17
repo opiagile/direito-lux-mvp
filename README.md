@@ -105,22 +105,22 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 git clone https://github.com/direito-lux/direito-lux.git
 cd direito-lux
 
-# 2. Configure o ambiente
-cp .env.example .env
-# Edite .env com suas configurações
-
-# 3. Inicie os serviços de infraestrutura
+# 2. Inicie os serviços de infraestrutura
 docker-compose up -d postgres redis rabbitmq
 
-# 4. Execute as migrações
-./scripts/setup-postgres.sh
+# 3. Execute as migrações
+docker run --rm -v "${PWD}/migrations:/migrations" --network host \
+  migrate/migrate -path=/migrations/ \
+  -database "postgres://direito_lux:dev_password_123@localhost:5432/direito_lux_dev?sslmode=disable" up
 
-# 5. Inicie o Auth Service
-cd services/auth-service
-make dev
+# 4. Compile todos os serviços
+./build-all.sh
 
-# 6. Teste a API
-curl http://localhost:8081/health
+# 5. Inicie todos os microserviços
+./start-services.sh
+
+# 6. Teste o ambiente
+./test-local.sh
 ```
 
 ### Desenvolvimento com Docker Compose
@@ -140,6 +140,7 @@ docker-compose down
 
 ### 📋 Documentação Principal
 - [**Status da Implementação**](./STATUS_IMPLEMENTACAO.md) - ✅ O que está pronto e ❌ o que falta
+- [**Diretrizes de Desenvolvimento**](./DIRETRIZES_DESENVOLVIMENTO.md) - 📐 Padrões e convenções obrigatórias
 - [**Setup do Ambiente**](./SETUP_AMBIENTE.md) - 🔧 Guia completo de instalação
 - [**Visão Geral**](./VISAO_GERAL_DIREITO_LUX.md) - 🎯 Detalhes do produto e planos
 - [**Arquitetura Full Cycle**](./ARQUITETURA_FULLCYCLE.md) - 🏗️ Arquitetura técnica detalhada
@@ -164,26 +165,28 @@ docker-compose down
 
 ## 📊 Status do Projeto
 
-### ✅ Implementado
+### ✅ Implementado (Completo)
 - ✅ Documentação completa e planejamento
 - ✅ Ambiente Docker com 15+ serviços
 - ✅ Template de microserviço Go (Hexagonal Architecture)
 - ✅ Auth Service completo com JWT + Multi-tenant
-- ✅ Migrações de banco de dados
+- ✅ Tenant Service com multi-tenancy e gestão de planos
+- ✅ Process Service com CQRS + Event Sourcing
+- ✅ DataJud Service com pool de CNPJs e circuit breaker
+- ✅ Migrações de banco robustas com triggers e funções
 - ✅ Event-driven architecture base
 
 ### 🚧 Em Desenvolvimento
-- 🔄 Tenant Service
-- 🔄 CI/CD Pipeline
+- 🔄 Criação da documentação atualizada
 
 ### ⏳ Próximos Passos
-1. Tenant Service (gerenciamento de organizações)
-2. Process Service (core business)
-3. DataJud Service (integração CNJ)
-4. Notification Service (WhatsApp/Email)
-5. AI Service (Python/FastAPI)
+1. Notification Service (WhatsApp/Email/Telegram)
+2. AI Service (Python/FastAPI para análise de documentos)
+3. Search Service (Elasticsearch)
+4. Report Service (relatórios e dashboard)
+5. Frontend (Web + Mobile)
 
-**Progresso Total**: ~25% completo
+**Progresso Total**: ~55% completo
 
 ## 🧪 Testes
 
@@ -205,13 +208,28 @@ make test-integration
 
 ```bash
 # Criar novo microserviço
-./scripts/create-service.sh nome-do-servico
+./create-service.sh nome-do-servico porta
+
+# Compilar todos os serviços
+./build-all.sh
+
+# Iniciar todos os microserviços
+./start-services.sh
+
+# Parar todos os microserviços
+./stop-services.sh
+
+# Testar ambiente completo
+./test-local.sh
 
 # Ver status dos containers
 docker-compose ps
 
 # Conectar ao PostgreSQL
 docker-compose exec postgres psql -U direito_lux -d direito_lux_dev
+
+# Ver logs de um serviço
+tail -f logs/auth-service.log
 
 # Limpar ambiente
 docker-compose down -v

@@ -41,8 +41,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req application.LoginRequest
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro ao fazer bind da requisição",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao fazer bind da requisição", err,
 			zap.String("operation", "login"),
 		)
 		
@@ -78,8 +77,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Realizar login
 	response, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro no login",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro no login", err,
 			zap.String("email", req.Email),
 			zap.String("tenant_id", req.TenantID),
 			zap.String("operation", "login"),
@@ -150,8 +148,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	
 	response, err := h.authService.RefreshToken(c.Request.Context(), req)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro no refresh token",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro no refresh token", err,
 			zap.String("operation", "refresh_token"),
 		)
 		
@@ -220,8 +217,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	
 	err := h.authService.Logout(c.Request.Context(), token)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro no logout",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro no logout", err,
 			zap.String("operation", "logout"),
 		)
 		
@@ -281,8 +277,7 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	
 	user, err := h.authService.ValidateToken(c.Request.Context(), token)
 	if err != nil {
-		logging.LogError(c.Request.Context(), h.logger, "Erro na validação de token",
-			zap.Error(err),
+		logging.LogError(c.Request.Context(), h.logger, "Erro na validação de token", err,
 			zap.String("operation", "validate_token"),
 		)
 		
