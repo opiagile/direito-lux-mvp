@@ -41,8 +41,7 @@ func NewServer(
 	// Middlewares globais
 	r.Use(middleware.Logger(logger))
 	r.Use(middleware.Recovery(logger))
-	r.Use(middleware.RequestID())
-	r.Use(middleware.CORS(cfg))
+	r.Use(middleware.CORS())
 
 	// Criar servidor
 	server := &Server{

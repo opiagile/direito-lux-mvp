@@ -346,13 +346,15 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=dev_redis_123
       - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
-      - WHATSAPP_API_URL=${WHATSAPP_API_URL:-http://localhost:9000}
-      - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:-demo_token}
-      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USER=${SMTP_USER:-dev@direitolux.com}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-dev@direitolux.com}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-demo_password}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-demo_token}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@direitolux.com}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Direito Lux}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-demo_token}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-123456789}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-demo_verify_token}
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
     ports:

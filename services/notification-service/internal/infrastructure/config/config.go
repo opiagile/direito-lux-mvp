@@ -17,6 +17,9 @@ type Config struct {
 	// Logging
 	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 
+	// Server
+	Server ServerConfig
+
 	// Database
 	Database DatabaseConfig
 
@@ -28,6 +31,12 @@ type Config struct {
 
 	// Metrics
 	Metrics MetricsConfig
+
+	// SMTP
+	SMTP SMTPConfig
+
+	// WhatsApp
+	WhatsApp WhatsAppConfig
 }
 
 // DatabaseConfig configurações do PostgreSQL
@@ -61,10 +70,38 @@ type RedisConfig struct {
 	DB       int    `envconfig:"REDIS_DB" default:"0"`
 }
 
+// ServerConfig configurações do servidor
+type ServerConfig struct {
+	Port         int `envconfig:"SERVER_PORT" default:"8080"`
+	ReadTimeout  int `envconfig:"SERVER_READ_TIMEOUT" default:"30"`
+	WriteTimeout int `envconfig:"SERVER_WRITE_TIMEOUT" default:"30"`
+	IdleTimeout  int `envconfig:"SERVER_IDLE_TIMEOUT" default:"60"`
+}
+
 // MetricsConfig configurações de métricas
 type MetricsConfig struct {
 	Enabled bool `envconfig:"METRICS_ENABLED" default:"true"`
 	Port    int  `envconfig:"METRICS_PORT" default:"9090"`
+}
+
+// SMTPConfig configurações do SMTP
+type SMTPConfig struct {
+	Host        string `envconfig:"SMTP_HOST" default:"localhost"`
+	Port        int    `envconfig:"SMTP_PORT" default:"587"`
+	Username    string `envconfig:"SMTP_USERNAME" required:"true"`
+	Password    string `envconfig:"SMTP_PASSWORD" required:"true"`
+	FromEmail   string `envconfig:"SMTP_FROM_EMAIL" required:"true"`
+	FromName    string `envconfig:"SMTP_FROM_NAME" default:"Direito Lux"`
+	UseTLS      bool   `envconfig:"SMTP_USE_TLS" default:"false"`
+	UseStartTLS bool   `envconfig:"SMTP_USE_STARTTLS" default:"true"`
+}
+
+// WhatsAppConfig configurações do WhatsApp Business API
+type WhatsAppConfig struct {
+	AccessToken   string `envconfig:"WHATSAPP_ACCESS_TOKEN" required:"true"`
+	PhoneNumberID string `envconfig:"WHATSAPP_PHONE_NUMBER_ID" required:"true"`
+	WebhookURL    string `envconfig:"WHATSAPP_WEBHOOK_URL"`
+	VerifyToken   string `envconfig:"WHATSAPP_VERIFY_TOKEN" required:"true"`
 }
 
 // Load carrega configuração a partir de variáveis de ambiente
@@ -76,6 +113,11 @@ func Load() (*Config, error) {
 	}
 	
 	return &cfg, nil
+}
+
+// NewConfig cria nova instância de configuração
+func NewConfig() (*Config, error) {
+	return Load()
 }
 
 // Validate valida a configuração

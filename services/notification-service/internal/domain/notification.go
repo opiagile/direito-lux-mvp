@@ -38,9 +38,12 @@ type NotificationStatus string
 
 const (
 	NotificationStatusPending    NotificationStatus = "pending"
+	NotificationStatusScheduled  NotificationStatus = "scheduled"
 	NotificationStatusProcessing NotificationStatus = "processing"
 	NotificationStatusSent       NotificationStatus = "sent"
+	NotificationStatusDelivered  NotificationStatus = "delivered"
 	NotificationStatusFailed     NotificationStatus = "failed"
+	NotificationStatusExpired    NotificationStatus = "expired"
 	NotificationStatusCancelled  NotificationStatus = "cancelled"
 )
 
@@ -73,12 +76,19 @@ type Notification struct {
 	TemplateID       *uuid.UUID           `json:"template_id,omitempty" db:"template_id"`
 	Variables        map[string]interface{} `json:"variables,omitempty" db:"variables"`
 	Metadata         map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	ScheduledAt      *time.Time           `json:"scheduled_at,omitempty" db:"scheduled_at"`
-	SentAt           *time.Time           `json:"sent_at,omitempty" db:"sent_at"`
-	FailedAt         *time.Time           `json:"failed_at,omitempty" db:"failed_at"`
-	ErrorMessage     *string              `json:"error_message,omitempty" db:"error_message"`
 	RetryCount       int                  `json:"retry_count" db:"retry_count"`
 	MaxRetries       int                  `json:"max_retries" db:"max_retries"`
+	NextRetryAt      *time.Time           `json:"next_retry_at,omitempty" db:"next_retry_at"`
+	ScheduledAt      *time.Time           `json:"scheduled_at,omitempty" db:"scheduled_at"`
+	SentAt           *time.Time           `json:"sent_at,omitempty" db:"sent_at"`
+	DeliveredAt      *time.Time           `json:"delivered_at,omitempty" db:"delivered_at"`
+	FailedAt         *time.Time           `json:"failed_at,omitempty" db:"failed_at"`
+	ErrorMessage     *string              `json:"error_message,omitempty" db:"error_message"`
+	ExternalID       *string              `json:"external_id,omitempty" db:"external_id"`
+	ExternalStatus   *string              `json:"external_status,omitempty" db:"external_status"`
+	ProcessingStartedAt  *time.Time       `json:"processing_started_at,omitempty" db:"processing_started_at"`
+	ProcessingFinishedAt *time.Time       `json:"processing_finished_at,omitempty" db:"processing_finished_at"`
+	Tags             []string             `json:"tags,omitempty" db:"tags"`
 	ExpiresAt        *time.Time           `json:"expires_at,omitempty" db:"expires_at"`
 	CreatedAt        time.Time            `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time            `json:"updated_at" db:"updated_at"`
