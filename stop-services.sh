@@ -41,10 +41,20 @@ if [ -f .datajud.pid ]; then
     rm -f .datajud.pid
 fi
 
+if [ -f .notification.pid ]; then
+    NOTIFICATION_PID=$(cat .notification.pid)
+    if kill -0 $NOTIFICATION_PID 2>/dev/null; then
+        echo "📧 Stopping Notification Service (PID: $NOTIFICATION_PID)..."
+        kill $NOTIFICATION_PID
+    fi
+    rm -f .notification.pid
+fi
+
 # Also kill any remaining processes by name (backup)
 pkill -f "auth-server" 2>/dev/null || true
 pkill -f "tenant-server" 2>/dev/null || true
 pkill -f "process-server" 2>/dev/null || true
 pkill -f "datajud-server" 2>/dev/null || true
+pkill -f "notification-server" 2>/dev/null || true
 
 echo "✅ All services stopped!"

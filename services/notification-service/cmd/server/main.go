@@ -8,20 +8,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/direito-lux/tenant-service/internal/infrastructure/config"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/database"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/events"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/http"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/logging"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/metrics"
+	"github.com/direito-lux/notification-service/internal/infrastructure/config"
+	"github.com/direito-lux/notification-service/internal/infrastructure/database"
+	"github.com/direito-lux/notification-service/internal/infrastructure/events"
+	"github.com/direito-lux/notification-service/internal/infrastructure/http"
+	"github.com/direito-lux/notification-service/internal/infrastructure/logging"
+	"github.com/direito-lux/notification-service/internal/infrastructure/metrics"
+	"github.com/direito-lux/notification-service/internal/infrastructure/tracing"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// @title Template Service API
+// @title notificationservice Service API
 // @version 1.0
-// @description Direito Lux Template Microservice
+// @description Direito Lux notificationservice Microservice
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
@@ -31,7 +32,7 @@ import (
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8080
+// @host localhost:8085
 // @BasePath /api/v1
 
 // @securityDefinitions.apikey BearerAuth
@@ -59,7 +60,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("Iniciando Template Service",
+	logger.Info("Iniciando notificationservice Service",
 		zap.String("version", cfg.Version),
 		zap.String("environment", cfg.Environment),
 		zap.Int("port", cfg.Port),
@@ -72,6 +73,7 @@ func main() {
 		
 		// Infraestrutura
 		fx.Provide(
+			tracing.NewTracer,
 			metrics.NewMetrics,
 			database.NewConnection,
 			events.NewEventBus,
@@ -97,7 +99,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Parando Template Service...")
+	logger.Info("Parando notificationservice Service...")
 
 	// Parar aplicação
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
@@ -107,7 +109,7 @@ func main() {
 		logger.Error("Erro ao parar aplicação", zap.Error(err))
 	}
 
-	logger.Info("Template Service parado com sucesso")
+	logger.Info("notificationservice Service parado com sucesso")
 }
 
 // registerHooks registra hooks do ciclo de vida da aplicação
@@ -116,6 +118,7 @@ func registerHooks(
 	logger *zap.Logger,
 	server *http.Server,
 	metrics *metrics.Metrics,
+	tracer *tracing.Tracer,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -139,7 +142,10 @@ func registerHooks(
 				return err
 			}
 
-			// Outros recursos podem ser fechados aqui
+			// Fechar tracer
+			if err := tracer.Close(); err != nil {
+				logger.Error("Erro ao fechar tracer", zap.Error(err))
+			}
 
 			return nil
 		},

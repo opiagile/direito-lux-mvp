@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/direito-lux/tenant-service/internal/application"

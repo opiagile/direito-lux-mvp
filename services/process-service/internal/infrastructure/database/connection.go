@@ -38,7 +38,7 @@ func NewConnection(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metr
 	// Configurar pool de conexões
 	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	db.SetConnMaxLifetime(time.Duration(cfg.Database.ConnMaxLifetime) * time.Minute)
 
 	// Testar conexão
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

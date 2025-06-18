@@ -6,7 +6,7 @@ set -e
 
 echo "🔨 Compilando todos os microserviços Direito Lux..."
 
-SERVICES=("auth-service" "tenant-service" "process-service" "datajud-service")
+SERVICES=("auth-service" "tenant-service" "process-service" "datajud-service" "notification-service")
 BUILD_SUCCESS=true
 
 for service in "${SERVICES[@]}"; do

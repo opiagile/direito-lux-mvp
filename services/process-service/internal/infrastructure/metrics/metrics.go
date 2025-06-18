@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -363,7 +364,7 @@ func (m *Metrics) collectSystemMetrics() {
 // HTTPMiddleware middleware do Gin para coletar métricas HTTP
 func (m *Metrics) HTTPMiddleware() gin.HandlerFunc {
 	if !m.config.Metrics.Enabled {
-		return gin.Next
+		return func(c *gin.Context) { c.Next() }
 	}
 
 	return func(c *gin.Context) {

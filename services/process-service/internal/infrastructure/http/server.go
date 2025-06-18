@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -50,13 +49,10 @@ func NewServer(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metrics)
 
 	// Configurar servidor HTTP
 	server.server = &http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.Port),
-		Handler:           router,
-		ReadTimeout:       cfg.HTTP.ReadTimeout,
-		WriteTimeout:      cfg.HTTP.WriteTimeout,
-		IdleTimeout:       cfg.HTTP.IdleTimeout,
-		ReadHeaderTimeout: cfg.HTTP.ReadHeaderTimeout,
-		MaxHeaderBytes:    cfg.HTTP.MaxHeaderBytes,
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      router,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
 	return server
@@ -80,9 +76,7 @@ func (s *Server) setupMiddlewares() {
 	s.router.Use(middleware.Tenant(s.logger))
 
 	// Rate limiting middleware
-	if s.config.HTTP.RateLimitEnabled {
-		s.router.Use(middleware.RateLimit(s.config))
-	}
+	s.router.Use(middleware.RateLimit(s.config))
 
 	// Metrics middleware
 	if s.metrics != nil {

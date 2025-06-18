@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/process-service/internal/infrastructure/config"
-	"github.com/direito-lux/process-service/internal/infrastructure/logging"
+	"github.com/direito-lux/notification-service/internal/infrastructure/config"
+	"github.com/direito-lux/notification-service/internal/infrastructure/logging"
 )
 
 // Logger middleware para logging de requisições
@@ -31,18 +31,17 @@ func Recovery(logger *zap.Logger) gin.HandlerFunc {
 	})
 }
 
-// RequestID middleware para adicionar ID único à requisição
+// RequestID middleware para adicionar ID único às requisições
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
 			requestID = uuid.New().String()
 		}
-		
+
 		c.Header("X-Request-ID", requestID)
-		c.Set("request_id", requestID)
 		
-		// Adicionar ao contexto para logging
+		// Adicionar ao contexto
 		ctx := logging.WithOperation(c.Request.Context(), c.Request.Method+" "+c.Request.URL.Path)
 		c.Request = c.Request.WithContext(ctx)
 		
@@ -50,26 +49,9 @@ func RequestID() gin.HandlerFunc {
 	}
 }
 
-// Tenant middleware para extrair tenant ID
-func Tenant(logger *zap.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tenantID := c.GetHeader("X-Tenant-ID")
-		
-		if tenantID != "" {
-			c.Set("tenant_id", tenantID)
-			
-			// Adicionar ao contexto para logging
-			ctx := logging.WithTenantID(c.Request.Context(), tenantID)
-			c.Request = c.Request.WithContext(ctx)
-		}
-		
-		c.Next()
-	}
-}
-
-// CORS middleware para Cross-Origin Resource Sharing
+// CORS middleware
 func CORS(cfg *config.Config) gin.HandlerFunc {
-	return func(c *gin.Context) {
+	return func(c *gin.Context) {		
 		// Em desenvolvimento, permitir qualquer origem
 		allowedOrigin := "*"
 		if !cfg.IsDevelopment() {
@@ -89,27 +71,4 @@ func CORS(cfg *config.Config) gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// RateLimit middleware para limitação de taxa
-func RateLimit(cfg *config.Config) gin.HandlerFunc {
-	// Implementação simplificada - em produção usar redis-based rate limiter
-	return func(c *gin.Context) {
-		// Implementar rate limiting aqui
-		c.Next()
-	}
-}
-
-// joinStrings utilitário para juntar strings
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	
-	return result
 }

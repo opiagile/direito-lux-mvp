@@ -48,6 +48,7 @@ test_health "Auth Service" "http://localhost:8081/health"
 test_health "Tenant Service" "http://localhost:8082/health" 
 test_health "Process Service" "http://localhost:8083/health"
 test_health "DataJud Service" "http://localhost:8084/health"
+test_health "Notification Service" "http://localhost:8085/health"
 
 echo ""
 echo "🗃️ Testando Infraestrutura..."
@@ -96,10 +97,11 @@ docker-compose ps --format "table {{.Name}}\t{{.State}}\t{{.Ports}}"
 echo ""
 echo "📈 URLs de Acesso:"
 echo "=================="
-echo "🔐 Auth Service:     http://localhost:8081"
-echo "🏢 Tenant Service:   http://localhost:8082" 
-echo "📋 Process Service:  http://localhost:8083"
-echo "🔗 DataJud Service:  http://localhost:8084"
+echo "🔐 Auth Service:          http://localhost:8081"
+echo "🏢 Tenant Service:        http://localhost:8082" 
+echo "📋 Process Service:       http://localhost:8083"
+echo "🔗 DataJud Service:       http://localhost:8084"
+echo "📧 Notification Service:  http://localhost:8085"
 echo "🗄️ PostgreSQL:       localhost:5432"
 echo "🚀 Redis:            localhost:6379"
 echo "🐰 RabbitMQ:         http://localhost:15672"
@@ -124,7 +126,7 @@ echo "=================="
 
 # Contar serviços funcionais
 functional_services=0
-total_services=4
+total_services=5
 
 echo "📊 Status dos Microserviços:"
 if curl -f -s "http://localhost:8081/health" > /dev/null 2>&1; then
@@ -153,6 +155,13 @@ if curl -f -s "http://localhost:8084/health" > /dev/null 2>&1; then
     ((functional_services++))
 else
     echo "  ❌ DataJud Service"
+fi
+
+if curl -f -s "http://localhost:8085/health" > /dev/null 2>&1; then
+    echo "  ✅ Notification Service"
+    ((functional_services++))
+else
+    echo "  ❌ Notification Service"
 fi
 
 echo ""

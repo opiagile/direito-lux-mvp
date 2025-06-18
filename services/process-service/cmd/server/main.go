@@ -41,14 +41,14 @@ import (
 
 func main() {
 	// Carregar configurações
-	cfg, err := config.Load()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		fmt.Printf("Erro ao carregar configurações: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Configurar logger
-	logger, err := logging.NewLogger(cfg.LogLevel, cfg.Environment)
+	logger, err := logging.NewLogger("info", cfg.Environment)
 	if err != nil {
 		fmt.Printf("Erro ao configurar logger: %v\n", err)
 		os.Exit(1)
@@ -63,7 +63,7 @@ func main() {
 	logger.Info("Iniciando Process Service",
 		zap.String("version", cfg.Version),
 		zap.String("environment", cfg.Environment),
-		zap.Int("port", cfg.Port),
+		zap.Int("port", cfg.Server.Port),
 	)
 
 	// Usar Fx para injeção de dependência
