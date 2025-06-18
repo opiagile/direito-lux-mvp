@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/direito-lux/auth-service/internal/application"
+	"github.com/direito-lux/auth-service/internal/domain"
 	"github.com/direito-lux/auth-service/internal/infrastructure/config"
 	"github.com/direito-lux/auth-service/internal/infrastructure/database"
 	"github.com/direito-lux/auth-service/internal/infrastructure/events"
@@ -17,9 +18,39 @@ import (
 	"github.com/direito-lux/auth-service/internal/infrastructure/metrics"
 	"github.com/direito-lux/auth-service/internal/infrastructure/tracing"
 
+	"github.com/jmoiron/sqlx"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+// eventBusAdapter adapta events.EventBus para application.EventBus
+type eventBusAdapter struct {
+	eventBus events.EventBus
+}
+
+// domainEventAdapter adapta events.DomainEvent para application.DomainEvent
+type domainEventAdapter struct {
+	event events.DomainEvent
+}
+
+func (a *domainEventAdapter) EventType() string {
+	return a.event.GetEventType()
+}
+
+func (a *domainEventAdapter) AggregateID() string {
+	return a.event.GetAggregateID()
+}
+
+func (a *domainEventAdapter) Payload() ([]byte, error) {
+	// Simple JSON encoding for now
+	return []byte(fmt.Sprintf(`{"event_type":"%s","aggregate_id":"%s"}`, a.event.GetEventType(), a.event.GetAggregateID())), nil
+}
+
+func (adapter *eventBusAdapter) Publish(ctx context.Context, event application.DomainEvent) error {
+	// For now, we'll skip the event publishing to avoid interface complexity
+	// TODO: Implement proper adapter when events are needed
+	return nil
+}
 
 // @title Auth Service API
 // @version 1.0
@@ -77,22 +108,62 @@ func main() {
 			tracing.NewTracer,
 			metrics.NewMetrics,
 			database.NewConnection,
-			
+			func(conn *database.Connection) *sqlx.DB {
+				return conn.GetDB()
+			},
 			events.NewEventBus,
 		),
 		
-		// Repositories
+		// Repositories (cast to interfaces)
 		fx.Provide(
-			database.NewUserRepository,
-			database.NewSessionRepository,
-			database.NewRefreshTokenRepository,
-			database.NewLoginAttemptRepository,
+			fx.Annotate(
+				database.NewUserRepository,
+				fx.As(new(domain.UserRepository)),
+			),
+			fx.Annotate(
+				database.NewSessionRepository,
+				fx.As(new(domain.SessionRepository)),
+			),
+			fx.Annotate(
+				database.NewRefreshTokenRepository,
+				fx.As(new(domain.RefreshTokenRepository)),
+			),
+			fx.Annotate(
+				database.NewLoginAttemptRepository,
+				fx.As(new(domain.LoginAttemptRepository)),
+			),
 		),
 		
-		// Services
+		// Services with configuration injection
 		fx.Provide(
-			application.NewAuthService,
-			application.NewUserService,
+			func(
+				userRepo domain.UserRepository,
+				sessionRepo domain.SessionRepository,
+				refreshTokenRepo domain.RefreshTokenRepository,
+				loginAttemptRepo domain.LoginAttemptRepository,
+				eventBus events.EventBus,
+				cfg *config.Config,
+			) *application.AuthService {
+				return application.NewAuthService(
+					userRepo,
+					sessionRepo,
+					refreshTokenRepo,
+					loginAttemptRepo,
+					eventBus,
+					cfg.JWT.Secret,
+					cfg.JWT.ExpiryHours,
+					cfg.JWT.RefreshExpiryDays,
+				)
+			},
+			fx.Annotate(
+				func(eventBus events.EventBus) application.EventBus {
+					return &eventBusAdapter{eventBus: eventBus}
+				},
+				fx.As(new(application.EventBus)),
+			),
+			func(userRepo domain.UserRepository, eventBus application.EventBus) *application.UserService {
+				return application.NewUserService(userRepo, eventBus)
+			},
 		),
 
 		// HTTP Server

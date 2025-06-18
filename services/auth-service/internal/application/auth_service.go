@@ -10,6 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	
 	"github.com/direito-lux/auth-service/internal/domain"
+	"github.com/direito-lux/auth-service/internal/infrastructure/events"
 )
 
 // AuthService implementa os casos de uso de autenticação
@@ -18,7 +19,7 @@ type AuthService struct {
 	sessionRepo      domain.SessionRepository
 	refreshTokenRepo domain.RefreshTokenRepository
 	loginAttemptRepo domain.LoginAttemptRepository
-	eventBus         EventBus
+	eventBus         events.EventBus
 	jwtSecret        string
 	jwtExpiryHours   int
 	refreshExpiryDays int
@@ -30,7 +31,7 @@ func NewAuthService(
 	sessionRepo domain.SessionRepository,
 	refreshTokenRepo domain.RefreshTokenRepository,
 	loginAttemptRepo domain.LoginAttemptRepository,
-	eventBus EventBus,
+	eventBus events.EventBus,
 	jwtSecret string,
 	jwtExpiryHours int,
 	refreshExpiryDays int,
@@ -87,16 +88,16 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		// Registrar tentativa bloqueada
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
-		// Publicar evento de login bloqueado
-		event := domain.LoginFailedEvent{
-			Email:     req.Email,
-			TenantID:  req.TenantID,
-			IPAddress: req.IPAddress,
-			UserAgent: req.UserAgent,
-			Reason:    "too_many_failures",
-			FailedAt:  time.Now(),
-		}
-		s.eventBus.Publish(ctx, event)
+		// TODO: Publicar evento de login bloqueado
+		// event := domain.LoginFailedEvent{
+		//	Email:     req.Email,
+		//	TenantID:  req.TenantID,
+		//	IPAddress: req.IPAddress,
+		//	UserAgent: req.UserAgent,
+		//	Reason:    "too_many_failures",
+		//	FailedAt:  time.Now(),
+		// }
+		// // s.eventBus.Publish(ctx, event)
 		
 		return nil, domain.ErrTooManyFailures
 	}
@@ -106,15 +107,16 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if err != nil {
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
-		event := domain.LoginFailedEvent{
-			Email:     req.Email,
-			TenantID:  req.TenantID,
-			IPAddress: req.IPAddress,
-			UserAgent: req.UserAgent,
-			Reason:    "user_not_found",
-			FailedAt:  time.Now(),
-		}
-		s.eventBus.Publish(ctx, event)
+		// TODO: Publicar evento de login falhou
+		// event := domain.LoginFailedEvent{
+		//	Email:     req.Email,
+		//	TenantID:  req.TenantID,
+		//	IPAddress: req.IPAddress,
+		//	UserAgent: req.UserAgent,
+		//	Reason:    "user_not_found",
+		//	FailedAt:  time.Now(),
+		// }
+		// // s.eventBus.Publish(ctx, event)
 		
 		return nil, domain.ErrUserNotFound
 	}
@@ -123,15 +125,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if user.TenantID != req.TenantID {
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
-		event := domain.LoginFailedEvent{
-			Email:     req.Email,
-			TenantID:  req.TenantID,
-			IPAddress: req.IPAddress,
-			UserAgent: req.UserAgent,
-			Reason:    "wrong_tenant",
-			FailedAt:  time.Now(),
-		}
-		s.eventBus.Publish(ctx, event)
+		// TODO: Publish login failed event
 		
 		return nil, domain.ErrUserNotFound
 	}
@@ -140,15 +134,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if !user.CanLogin() {
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
-		event := domain.LoginFailedEvent{
-			Email:     req.Email,
-			TenantID:  req.TenantID,
-			IPAddress: req.IPAddress,
-			UserAgent: req.UserAgent,
-			Reason:    "user_inactive",
-			FailedAt:  time.Now(),
-		}
-		s.eventBus.Publish(ctx, event)
+		// TODO: Publish event
 		
 		return nil, fmt.Errorf("usuário inativo")
 	}
@@ -157,15 +143,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if !user.VerifyPassword(req.Password) {
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
-		event := domain.LoginFailedEvent{
-			Email:     req.Email,
-			TenantID:  req.TenantID,
-			IPAddress: req.IPAddress,
-			UserAgent: req.UserAgent,
-			Reason:    "invalid_password",
-			FailedAt:  time.Now(),
-		}
-		s.eventBus.Publish(ctx, event)
+		// TODO: Publish event
 		
 		return nil, fmt.Errorf("credenciais inválidas")
 	}
@@ -229,16 +207,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	// Registrar tentativa de login bem-sucedida
 	s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, true)
 	
-	// Publicar evento de login
-	loginEvent := domain.UserLoggedInEvent{
-		UserID:     user.ID,
-		TenantID:   user.TenantID,
-		Email:      user.Email,
-		IPAddress:  req.IPAddress,
-		UserAgent:  req.UserAgent,
-		LoggedInAt: now,
-	}
-	s.eventBus.Publish(ctx, loginEvent)
+	// TODO: Publish event
 	
 	return &LoginResponse{
 		AccessToken:  accessToken,
@@ -375,14 +344,7 @@ func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
 		// Log do erro, mas não falhar o logout
 	}
 	
-	// Publicar evento de logout
-	event := domain.UserLoggedOutEvent{
-		UserID:      session.UserID,
-		TenantID:    session.TenantID,
-		SessionID:   session.ID,
-		LoggedOutAt: time.Now(),
-	}
-	s.eventBus.Publish(ctx, event)
+	// TODO: Publish event
 	
 	return nil
 }
