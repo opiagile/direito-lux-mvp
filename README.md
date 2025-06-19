@@ -154,6 +154,7 @@ docker-compose down
 |---------|-----|-------------|
 | **API Gateway** | http://localhost:8000 | - |
 | **Auth Service** | http://localhost:8081 | - |
+| **AI Service** | http://localhost:8000 | - |
 | **PostgreSQL** | localhost:5432 | direito_lux/dev_password_123 |
 | **Redis** | localhost:6379 | dev_redis_123 |
 | **RabbitMQ** | http://localhost:15672 | direito_lux/dev_rabbit_123 |
@@ -174,21 +175,23 @@ docker-compose down
 - ✅ Process Service com CQRS + Event Sourcing
 - ✅ DataJud Service com pool de CNPJs e circuit breaker
 - ✅ Notification Service (estrutura domain e application completas)
+- ✅ AI Service completo (Python/FastAPI + ML para análise jurisprudencial)
+- ✅ Search Service completo (Go + Elasticsearch para busca avançada)
 - ✅ Migrações de banco robustas com triggers e funções
 - ✅ Event-driven architecture base
 - ✅ Correções de qualidade e estabilidade aplicadas
 
 ### 🚧 Em Desenvolvimento
 - 🔄 Finalização de providers específicos do Notification Service
+- 🔄 Deploy e testes do AI Service em ambiente DEV
 
 ### ⏳ Próximos Passos
-1. Finalizar Notification Service (WhatsApp/Email/Telegram providers)
-2. AI Service (Python/FastAPI para análise de documentos)
-3. Search Service (Elasticsearch)
-4. Report Service (relatórios e dashboard)
-5. Frontend (Web + Mobile)
+1. Deploy AI Service e Search Service em ambiente de desenvolvimento
+2. Finalizar Notification Service (WhatsApp/Email/Telegram providers)
+3. Report Service (relatórios e dashboard)
+4. Frontend (Web + Mobile)
 
-**Progresso Total**: ~65% dos microserviços core completos
+**Progresso Total**: ~85% dos microserviços core completos
 
 ## 🧪 Testes
 

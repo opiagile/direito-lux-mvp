@@ -396,7 +396,7 @@ services:
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
     ports:
-      - "8086:8000"
+      - "8087:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -407,6 +407,83 @@ services:
     volumes:
       - ./services/ai-service:/app
       - ai_models:/app/models
+    networks:
+      - direito-lux-network
+    restart: unless-stopped
+
+  # Elasticsearch - Search Engine
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: direito-lux-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - direito-lux-network
+
+  # Search Service
+  search-service:
+    build:
+      context: ./services/search-service
+      dockerfile: Dockerfile.dev
+    container_name: direito-lux-search
+    environment:
+      - PORT=8086
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=direito_lux_dev
+      - DB_USER=direito_lux
+      - DB_PASSWORD=dev_password_123
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=direito_lux
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=dev_redis_123
+      - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - TENANT_SERVICE_URL=http://tenant-service:8080
+      - PROCESS_SERVICE_URL=http://process-service:8080
+      - AI_SERVICE_URL=http://ai-service:8000
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - LOG_LEVEL=debug
+      - MAX_SEARCH_RESULTS=100
+      - DEFAULT_PAGE_SIZE=20
+      - SEARCH_CACHE_TTL=5m
+      - INDEX_BATCH_SIZE=1000
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      tenant-service:
+        condition: service_started
+    volumes:
+      - ./services/search-service:/app
+      - /app/vendor
     networks:
       - direito-lux-network
     restart: unless-stopped
@@ -479,6 +556,7 @@ volumes:
   prometheus_data:
   grafana_data:
   pgadmin_data:
+  elasticsearch_data:
   ai_models:
 
 networks:
