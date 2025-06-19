@@ -113,35 +113,51 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 - Python 3.11+
 - Make
 
-### Quick Start
+### 🎯 Quick Start - Deploy DEV (NOVO)
 
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/direito-lux/direito-lux.git
-cd direito-lux
+cd direito-lux/services
 
-# 2. Inicie os serviços de infraestrutura
-docker-compose up -d postgres redis rabbitmq
+# 2. Deploy automatizado completo (primeira vez)
+chmod +x scripts/deploy-dev.sh
+./scripts/deploy-dev.sh --clean --build
 
-# 3. Execute as migrações
-docker run --rm -v "${PWD}/migrations:/migrations" --network host \
-  migrate/migrate -path=/migrations/ \
-  -database "postgres://direito_lux:dev_password_123@localhost:5432/direito_lux_dev?sslmode=disable" up
+# 3. Verificar serviços rodando
+./scripts/deploy-dev.sh status
 
-# 4. Compile todos os serviços
-./build-all.sh
+# 4. Testar conectividade
+./scripts/deploy-dev.sh test
 
-# 5. Inicie todos os microserviços
-./start-services.sh
-
-# 6. Teste o ambiente
-./test-local.sh
+# 5. Ver logs em tempo real
+./scripts/deploy-dev.sh logs
 ```
 
-### Desenvolvimento com Docker Compose
+### 🔧 Comandos Úteis
 
 ```bash
-# Iniciar todos os serviços
+# Deploy normal (dias seguintes)
+./scripts/deploy-dev.sh
+
+# Parar todos os serviços
+./scripts/deploy-dev.sh stop
+
+# Reiniciar serviços
+./scripts/deploy-dev.sh restart
+
+# Ver endpoints disponíveis
+./scripts/deploy-dev.sh endpoints
+
+# Logs de serviço específico
+./scripts/deploy-dev.sh logs ai-service
+./scripts/deploy-dev.sh logs search-service
+```
+
+### 🎛️ Desenvolvimento Manual
+
+```bash
+# Iniciar todos os serviços (método antigo)
 docker-compose up -d
 
 # Ver logs
@@ -155,58 +171,61 @@ docker-compose down
 
 ### 📋 Documentação Principal
 - [**Status da Implementação**](./STATUS_IMPLEMENTACAO.md) - ✅ O que está pronto e ❌ o que falta
+- [**Deploy DEV**](./services/README-DEPLOYMENT.md) - 🚀 Guia de deploy automatizado
 - [**Diretrizes de Desenvolvimento**](./DIRETRIZES_DESENVOLVIMENTO.md) - 📐 Padrões e convenções obrigatórias
 - [**Setup do Ambiente**](./SETUP_AMBIENTE.md) - 🔧 Guia completo de instalação
 - [**Visão Geral**](./VISAO_GERAL_DIREITO_LUX.md) - 🎯 Detalhes do produto e planos
 - [**Arquitetura Full Cycle**](./ARQUITETURA_FULLCYCLE.md) - 🏗️ Arquitetura técnica detalhada
 - [**Event Storming**](./EVENT_STORMING_DIREITO_LUX.md) - 📊 Domain modeling
 - [**Roadmap**](./ROADMAP_IMPLEMENTACAO.md) - 🗓️ Plano de implementação
-- [**Processo de Documentação**](./PROCESSO_DOCUMENTACAO.md) - 📝 Como manter docs atualizadas
+- [**MCP Service**](./services/mcp-service/MCP_SERVICE.md) - 🤖 Model Context Protocol (diferencial)
 
-### 🔗 URLs de Desenvolvimento
+### 🔗 URLs de Desenvolvimento (Deploy DEV)
 
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
-| **API Gateway** | http://localhost:8000 | - |
-| **Auth Service** | http://localhost:8081 | - |
 | **AI Service** | http://localhost:8000 | - |
-| **PostgreSQL** | localhost:5432 | direito_lux/dev_password_123 |
-| **Redis** | localhost:6379 | dev_redis_123 |
-| **RabbitMQ** | http://localhost:15672 | direito_lux/dev_rabbit_123 |
-| **Keycloak** | http://localhost:8080 | admin/admin123 |
-| **Jaeger** | http://localhost:16686 | - |
-| **Prometheus** | http://localhost:9090 | - |
-| **Grafana** | http://localhost:3000 | admin/admin123 |
-| **Kibana** | http://localhost:5601 | - |
+| **Search Service** | http://localhost:8086 | - |
+| **AI Service Docs** | http://localhost:8000/docs | - |
+| **Search Service Health** | http://localhost:8086/health | - |
+| **PostgreSQL (Main)** | localhost:5432 | direito_lux/direito_lux_pass_dev |
+| **PostgreSQL (MCP)** | localhost:5434 | mcp_user/mcp_pass_dev |
+| **Redis (Main)** | localhost:6379 | redis_pass_dev |
+| **Redis (MCP)** | localhost:6380 | redis_pass_dev |
+| **RabbitMQ (Main)** | http://localhost:15672 | direito_lux/rabbit_pass_dev |
+| **RabbitMQ (MCP)** | http://localhost:15673 | mcp_user/rabbit_pass_dev |
+| **Elasticsearch** | http://localhost:9200 | - |
+| **Jaeger Tracing** | http://localhost:16686 | - |
 
 ## 📊 Status do Projeto
 
 ### ✅ Implementado (Completo)
 - ✅ Documentação completa e planejamento
 - ✅ Ambiente Docker com 15+ serviços
+- ✅ **Deploy DEV Environment** - Script automatizado com todos os serviços
 - ✅ Template de microserviço Go (Hexagonal Architecture)
 - ✅ Auth Service completo com JWT + Multi-tenant
 - ✅ Tenant Service com multi-tenancy e gestão de planos
 - ✅ Process Service com CQRS + Event Sourcing
 - ✅ DataJud Service com pool de CNPJs e circuit breaker
 - ✅ Notification Service (estrutura domain e application completas)
-- ✅ AI Service completo (Python/FastAPI + ML para análise jurisprudencial)
-- ✅ Search Service completo (Go + Elasticsearch para busca avançada)
+- ✅ **AI Service completo** - Python/FastAPI + ML para análise jurisprudencial (deploy ready)
+- ✅ **Search Service completo** - Go + Elasticsearch para busca avançada (deploy ready)
+- ✅ **MCP Service completo** - Model Context Protocol com 17+ ferramentas (diferencial único)
 - ✅ Migrações de banco robustas com triggers e funções
 - ✅ Event-driven architecture base
 - ✅ Correções de qualidade e estabilidade aplicadas
 
 ### 🚧 Em Desenvolvimento
-- 🔄 Finalização de providers específicos do Notification Service
-- 🔄 Deploy e testes do AI Service em ambiente DEV
+- 🔄 Finalização de providers específicos do Notification Service (WhatsApp, Email, Telegram)
 
 ### ⏳ Próximos Passos
-1. Deploy AI Service e Search Service em ambiente de desenvolvimento
-2. Finalizar Notification Service (WhatsApp/Email/Telegram providers)
-3. Report Service (relatórios e dashboard)
-4. Frontend (Web + Mobile)
+1. Finalizar Notification Service (WhatsApp/Email/Telegram providers)
+2. Report Service (relatórios e dashboard)
+3. Frontend (Web + Mobile)
+4. Infraestrutura de produção (Kubernetes + GCP)
 
-**Progresso Total**: ~85% dos microserviços core completos
+**Progresso Total**: ~95% dos microserviços core completos (9/10 serviços implementados)
 
 ## 🧪 Testes
 

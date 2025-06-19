@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL para persistência
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: direito_lux_mcp
+      POSTGRES_USER: mcp_user
+      POSTGRES_PASSWORD: mcp_pass_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-EXEC", "pg_isready -U mcp_user -d direito_lux_mcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis para cache e sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass redis_pass_dev
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # RabbitMQ para messaging
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: mcp_user
+      RABBITMQ_DEFAULT_PASS: rabbit_pass_dev
+      RABBITMQ_DEFAULT_VHOST: mcp_vhost
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Jaeger para distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.51
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "6832:6832/udp"
+      - "14269:14268"
+      - "16687:16686"
+    command: [
+      "--memory.max-traces=10000",
+      "--query.base-path=/jaeger/ui"
+    ]
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
