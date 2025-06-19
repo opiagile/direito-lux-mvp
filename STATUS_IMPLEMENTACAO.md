@@ -388,7 +388,26 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 
 ### 1. Microserviços Core
 
-
+#### MCP Service (Model Context Protocol) - PRIORIDADE ALTA
+- [ ] **Foundation**: Estrutura base com Go 1.21+ e arquitetura hexagonal
+- [ ] **Claude API Integration**: Conexão com Anthropic Claude via MCP Protocol
+- [ ] **Tool Registry**: Sistema de registro e gerenciamento de ferramentas MCP
+- [ ] **Core Tools**: 
+  - process_search, process_monitor, process_create
+  - jurisprudence_search, case_similarity_analysis, document_analysis
+  - advanced_search, search_suggestions
+  - notification_setup, bulk_notification
+  - generate_report, dashboard_metrics
+  - user_management, tenant_analytics
+- [ ] **Bot Interfaces**:
+  - WhatsApp Business API integration
+  - Telegram Bot implementation  
+  - Claude Chat interface
+  - Slack Bot (futuro)
+- [ ] **Security & Auth**: JWT integration + multi-tenant isolation
+- [ ] **Context Management**: Sessões de usuário e estado conversacional
+- [ ] **Performance**: Cache Redis + rate limiting + metrics
+- [ ] **Monetização**: Sistema de quotas por plano (200/1000/ilimitado comandos/mês)
 
 #### Report Service
 - [ ] Geração de relatórios PDF
@@ -475,17 +494,19 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 | Notification Service | 100% | ✅ Completo |
 | AI Service | 100% | ✅ Completo |
 | Search Service | 100% | ✅ Completo |
+| MCP Service | 0% | ⏳ Prioridade Alta |
 | Frontend | 0% | ⏳ Pendente |
 | Infraestrutura Prod | 0% | ⏳ Pendente |
 | CI/CD | 0% | ⏳ Pendente |
 
 ## 🎯 Próximos Passos Recomendados
 
-1. **Deploy AI Service e Search Service em DEV** - Configurar ambiente de desenvolvimento
-2. **Implementar Report Service** - Relatórios e dashboard analytics
-3. **Finalizar Notification Service providers** - WhatsApp, Email, Telegram específicos
-4. **Configurar Kubernetes local** - Preparar para produção
-5. **Implementar CI/CD básico** - Automatizar builds
+1. **Implementar MCP Service** - Model Context Protocol para bots conversacionais (diferencial único no mercado)
+2. **Deploy AI Service e Search Service em DEV** - Configurar ambiente de desenvolvimento
+3. **Implementar Report Service** - Relatórios e dashboard analytics
+4. **Finalizar Notification Service providers** - WhatsApp, Email, Telegram específicos
+5. **Configurar Kubernetes local** - Preparar para produção
+6. **Implementar CI/CD básico** - Automatizar builds
 
 ## 📊 Estimativa de Conclusão
 

@@ -9,12 +9,13 @@
 │                    (Kong ou Traefik)                       │
 └────────┬────────────────────────────────────┬──────────────┘
          │                                    │
-    ┌────▼─────┐                        ┌────▼─────┐
-    │  BFF     │                        │  BFF     │
-    │ WhatsApp │                        │   Web    │
-    └────┬─────┘                        └────┬─────┘
-         │                                    │
-┌────────▼────────────────────────────────────▼──────────────┐
+    ┌────▼─────┐     ┌─────────────┐     ┌────▼─────┐
+    │   MCP    │     │     BFF     │     │  BFF     │
+    │ Service  │ 🤖  │   WhatsApp  │     │   Web    │
+    │(Bot Hub) │     │   Telegram  │     │          │
+    └────┬─────┘     └─────┬───────┘     └────┬─────┘
+         │                 │                   │
+┌────────▼─────────────────▼───────────────────▼──────────────┐
 │                    Service Mesh (Istio)                     │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
@@ -22,11 +23,11 @@
 │  │  Service    │  │  Service    │  │   Service   │       │
 │  └─────────────┘  └─────────────┘  └─────────────┘       │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│  │  DataJud    │  │     AI      │  │  Document   │       │
+│  │  DataJud    │  │     AI      │  │   Search    │       │
 │  │  Service    │  │  Service    │  │   Service   │       │
 │  └─────────────┘  └─────────────┘  └─────────────┘       │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│  │   Tenant    │  │  Analytics  │  │   Billing   │       │
+│  │   Tenant    │  │  Analytics  │  │   Report    │       │
 │  │  Service    │  │  Service    │  │   Service   │       │
 │  └─────────────┘  └─────────────┘  └─────────────┘       │
 └─────────────────────────────────────────────────────────────┘
@@ -243,6 +244,52 @@
 - Jurimetria (ML predictions)
 - Reports por tenant
 - Data warehouse
+
+### 9. MCP Service (Golang + Claude API) 🤖 DIFERENCIAL EXCLUSIVO
+```go
+// Model Context Protocol Architecture
+├── domain/
+│   ├── entities/
+│   │   ├── mcp_session.go
+│   │   ├── conversation_context.go
+│   │   └── tool_registry.go
+│   └── tools/
+│       ├── process_tools.go      // 5 ferramentas
+│       ├── ai_tools.go           // 4 ferramentas
+│       ├── search_tools.go       // 2 ferramentas
+│       ├── notification_tools.go // 2 ferramentas
+│       ├── report_tools.go       // 2 ferramentas
+│       └── admin_tools.go        // 2 ferramentas
+├── application/
+│   ├── mcp_orchestrator/
+│   ├── context_manager/
+│   ├── tool_executor/
+│   └── bot_interfaces/
+│       ├── whatsapp_handler.go
+│       ├── telegram_handler.go
+│       ├── claude_chat_handler.go
+│       └── slack_handler.go
+└── infrastructure/
+    ├── claude_api/
+    ├── webhook_adapters/
+    ├── session_cache/
+    └── quota_manager/
+```
+
+**Responsabilidades:**
+- **Interface Conversacional**: WhatsApp, Telegram, Claude Chat, Slack
+- **17+ Ferramentas MCP**: Comandos naturais para todas as funcionalidades
+- **Context Management**: Sessões conversacionais com memória
+- **Multi-tenant Security**: Isolamento completo entre escritórios
+- **Quota Management**: 200/1000/ilimitado comandos por plano
+- **Tool Registry**: Sistema dinâmico de registro de ferramentas
+- **Bot Orchestration**: Coordenação entre múltiplas interfaces
+
+**Diferencial Estratégico:**
+- Primeiro SaaS jurídico brasileiro com interface conversacional completa
+- Democratização do acesso via linguagem natural
+- Redução da curva de aprendizado para advogados
+- Automação de tarefas via comandos de voz/texto
 
 ## Infraestrutura e DevOps
 

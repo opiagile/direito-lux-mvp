@@ -16,12 +16,14 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
 - Sistema de notificações multicanal (WhatsApp, Email, Telegram)
 - Resumos automáticos gerados por IA com linguagem adaptável
 
-### 2. Assistente Virtual Jurídico
-- Chatbot integrado ao WhatsApp (expansível para outros canais)
-- Processamento de linguagem natural para consultas
-- Explicação de termos jurídicos complexos
-- Sugestões de próximos passos baseadas no contexto
-- Atendimento 24/7 automatizado
+### 2. Interface Conversacional com MCP (Model Context Protocol) 🤖 DIFERENCIAL EXCLUSIVO
+- **Bot Inteligente Multi-plataforma**: WhatsApp Business, Telegram, Claude Chat e Slack
+- **17+ Ferramentas Especializadas**: process_search, jurisprudence_search, document_analysis, etc.
+- **Comandos Naturais**: "Mostre meus processos ativos", "Busque jurisprudências sobre responsabilidade civil"
+- **Context Management**: Sessões conversacionais com memória de contexto
+- **Multi-tenant Security**: Isolamento completo entre escritórios
+- **Quotas por Plano**: 200/1000/ilimitado comandos por mês
+- **Primeiro SaaS jurídico brasileiro** com interface conversacional completa
 
 ### 3. Painel de Gestão Avançado
 - Dashboard multi-tenant com isolamento total
@@ -30,12 +32,18 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
 - Armazenamento seguro de documentos
 - Geração de relatórios customizados
 
+## Funcionalidades Avançadas Implementadas ✅
+- **Pesquisa de Jurisprudência com IA**: Busca semântica com embeddings OpenAI/HuggingFace
+- **Geração Automática de Documentos**: Templates para contratos, petições e pareceres
+- **Busca Avançada**: Elasticsearch com agregações e sugestões automáticas
+- **Interface Conversacional MCP**: Bot multiplataforma com 17+ ferramentas
+
 ## Expansões Futuras
-- **Pesquisa de Jurisprudência com IA**: Busca semântica inteligente
-- **Geração Automática de Documentos**: Petições e contratos pré-preenchidos
-- **Jurimetria**: Previsão de resultados com machine learning
+- **Jurimetria Avançada**: Previsão de resultados com deep learning
+- **Custom MCP Tools**: Ferramentas personalizadas por escritório
 - **API Pública**: Integração com sistemas terceiros
 - **White-label**: Personalização completa para escritórios
+- **Voice Interface**: Comandos por voz nos bots
 
 ## Planos de Assinatura
 
@@ -57,6 +65,7 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - ✅ Resumos automáticos simples (sem IA avançada)
   - ✅ Painel de gestão básico
   - ✅ Histórico salvo de 30 dias para clientes cadastrados
+  - ❌ **Bot MCP (Interface Conversacional)**
   - ❌ Telegram
   - ❌ Assistente virtual com IA
   - ❌ Colaboração multiusuário
@@ -71,10 +80,13 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - Consultas DataJud: 500/dia (cache de 30 dias)
   - Armazenamento: 50GB
   - Notificações: 5.000/mês
+  - **Comandos Bot MCP: 200/mês** 🤖
   - API externa: 1.000 chamadas/mês
 
 - **Funcionalidades Disponíveis**:
   - ✅ Tudo do Starter, mais:
+  - ✅ **Bot MCP (WhatsApp + Telegram)** - 200 comandos/mês 🤖
+  - ✅ **Ferramentas MCP Básicas**: process_search, notification_setup, dashboard_metrics
   - ✅ Monitoramento automático para até 100 clientes
   - ✅ Verificação automática 6x/dia
   - ✅ Notificações também por Telegram
@@ -88,8 +100,8 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - ✅ Histórico salvo de 90 dias para clientes cadastrados
   - ✅ Webhooks para eventos
   - ✅ Backup semanal
-  - ❌ Pesquisa de jurisprudência
-  - ❌ Geração de documentos
+  - ❌ Claude Chat interface
+  - ❌ Ferramentas MCP avançadas (IA análises, geração docs)
   - ❌ Integrações avançadas
 
 ### 🏢 Plano Business - R$ 699/mês
@@ -100,13 +112,17 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - Consultas DataJud: 2.000/dia (cache inteligente 90 dias)
   - Armazenamento: 200GB
   - Notificações: Ilimitadas
+  - **Comandos Bot MCP: 1.000/mês** 🤖
   - API externa: 10.000 chamadas/mês
 
 - **Funcionalidades Disponíveis**:
   - ✅ Tudo do Professional, mais:
+  - ✅ **Claude Chat Interface** - Interface conversacional avançada 🤖
+  - ✅ **17+ Ferramentas MCP Completas**: jurisprudence_search, document_analysis, etc.
+  - ✅ **Bulk Operations via Bot**: Processamento em massa via comandos
   - ✅ Monitoramento automático para até 500 clientes
   - ✅ Verificação em tempo real (contínua)
-  - ✅ Pesquisa de jurisprudência com IA (beta)
+  - ✅ Pesquisa de jurisprudência com IA (implementada)
   - ✅ Geração de petições básicas (templates)
   - ✅ IA avançada (GPT-4 ou similar)
   - ✅ Análise preditiva simples
@@ -117,7 +133,7 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - ✅ Backup diário com retenção 30 dias
   - ✅ Suporte prioritário via chat
   - ✅ Treinamento inicial (4h)
-  - ❌ White-label
+  - ❌ Ferramentas MCP customizadas
   - ❌ Jurimetria completa
   - ❌ Servidor dedicado
 
@@ -129,10 +145,14 @@ O **Direito Lux** é uma plataforma SaaS voltada para modernizar e simplificar o
   - Consultas DataJud: Até 10.000/dia (negociável)
   - Armazenamento: 1TB+ (expansível)
   - Notificações: Ilimitadas
+  - **Comandos Bot MCP: Ilimitados** 🤖
   - API: Sem limites
 
 - **Funcionalidades Disponíveis**:
   - ✅ Tudo do Business, mais:
+  - ✅ **Ferramentas MCP Customizadas** - Tools específicas do escritório 🤖
+  - ✅ **Slack Bot Integration** - Interface conversacional no Slack
+  - ✅ **Voice Interface** - Comandos por voz nos bots (futuro)
   - ✅ White-label completo (domínio próprio)
   - ✅ Jurimetria avançada com ML customizado
   - ✅ IA personalizada treinada nos dados do escritório

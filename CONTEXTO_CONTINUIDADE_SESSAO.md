@@ -99,6 +99,17 @@ Não faça perguntas adicionais - continue diretamente com o desenvolvimento seg
    - ✅ Eventos de domínio para auditoria
    - ✅ Docker + Elasticsearch configurado
 
+### ⏳ Próximo Serviço a Implementar
+
+9. **MCP Service** - Model Context Protocol (PRIORIDADE ALTA - DIFERENCIAL ÚNICO)
+   - 🎯 **Diferencial de Mercado**: Primeiro SaaS jurídico brasileiro com interface conversacional via bots
+   - 🤖 **Bot Interfaces**: WhatsApp Business, Telegram, Claude Chat, Slack
+   - 🛠️ **17+ Ferramentas MCP**: process_search, jurisprudence_search, document_analysis, etc.
+   - 🔗 **Integração Total**: Conexão com todos os serviços existentes via API Gateway
+   - 💰 **Monetização**: Sistema de quotas (200/1000/ilimitado comandos por plano)
+   - 🏗️ **Stack**: Go 1.21 + Claude 3.5 Sonnet + Anthropic MCP Protocol
+   - 📊 **Features**: Context management, session handling, multi-tenant isolation
+
 ### 🚧 Correções de Qualidade Implementadas
 
 **Compilação e Estabilidade**:
@@ -125,9 +136,10 @@ Não faça perguntas adicionais - continue diretamente com o desenvolvimento seg
 
 ### 📊 Progresso Geral
 
-- **Concluído**: ~85% dos microserviços core
+- **Concluído**: ~85% dos microserviços core (8 de 10 serviços implementados)
 - **Semanas implementadas**: 1-9 do roadmap de 14 semanas
-- **Próxima meta**: Deploy DEV completo e Report Service
+- **Próxima meta**: Implementar MCP Service (diferencial único no mercado) + Deploy DEV completo
+- **Foco estratégico**: MCP Service como diferencial competitivo no SaaS jurídico brasileiro
 
 ## 📁 Arquivos de Contexto Essenciais
 
@@ -164,6 +176,7 @@ services/
 ├── notification-service/      🚧 70% - Domain/App layers (compilando)
 ├── ai-service/               ✅ Completo - Python/FastAPI + ML (funcional)
 ├── search-service/           ✅ Completo - Go + Elasticsearch (funcional)
+├── mcp-service/              ⏳ Prioridade Alta - Model Context Protocol (0%)
 └── report-service/           ⏳ Pendente - Dashboard e relatórios
 ```
 
@@ -193,6 +206,7 @@ services/
 - ✅ **Notification Service Base** - Domain e Application layers implementados
 - ✅ **AI Service Completo** - Python/FastAPI + ML com busca semântica e geração de documentos
 - ✅ **Search Service Completo** - Go + Elasticsearch com indexação, cache e agregações
+- 🎯 **MCP Service Planejado** - Model Context Protocol para interfaces conversacionais (diferencial único)
 
 ## 🔄 Como Atualizar Este Documento
 
@@ -224,6 +238,8 @@ X. **Nome do Service** - Descrição breve
 7. **Event Buses Simplificados** - RabbitMQ complexo foi substituído por implementações estáveis
 8. **Troubleshooting Resolvido** - Adapter pattern para interfaces EventBus incompatíveis
 9. **Notification Service 70% implementado** - Domain e Application layers prontos
+10. **MCP Service como Diferencial** - Primeiro SaaS jurídico brasileiro com interface conversacional
+11. **Documentação MCP Completa** - 17+ ferramentas especificadas em MCP_SERVICE.md
 
 ## 📞 Comandos Úteis de Verificação
 
@@ -238,6 +254,8 @@ curl http://localhost:8083/health  # Process Service
 curl http://localhost:8084/health  # DataJud Service
 curl http://localhost:8085/health  # Notification Service
 curl http://localhost:8000/health  # AI Service
+curl http://localhost:8086/health  # Search Service
+curl http://localhost:8088/health  # MCP Service (quando implementado)
 
 # Compilar todos os serviços
 ./build-all.sh
@@ -248,6 +266,8 @@ cd services/tenant-service && go build ./cmd/server/main.go
 cd services/process-service && go build ./cmd/server/main.go
 cd services/datajud-service && go build ./cmd/server/main.go
 cd services/notification-service && go build ./cmd/server/main.go
+cd services/search-service && go build ./cmd/server/main.go
+cd services/mcp-service && go build ./cmd/server/main.go  # quando implementado
 cd services/ai-service && python -c "from app.main import app; print('AI Service OK')"
 
 # Conectar ao banco
@@ -259,7 +279,7 @@ docker-compose logs -f auth-service
 
 ---
 
-**🔄 Última Atualização**: 18/06/2025 - Search Service implementado (100%) + Go/Elasticsearch completo
+**🔄 Última Atualização**: 18/06/2025 - MCP Service documentado como diferencial estratégico
 **👨‍💻 Responsável**: Full Cycle Developer  
-**📈 Progresso**: ~85% dos microserviços core completos (9 de 14 semanas)
-**🎯 Próximo**: Deploy DEV do AI Service + Search Service e Report Service
+**📈 Progresso**: ~85% dos microserviços core + MCP planejado (8 implementados de 10 total)
+**🎯 Próximo**: Implementar MCP Service (prioridade alta) + Deploy DEV do AI/Search Services

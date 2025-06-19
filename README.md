@@ -19,6 +19,7 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 
 ### 🏆 Diferenciais
 
+- 🤖 **EXCLUSIVO: Interface Conversacional (MCP)** - Primeiro SaaS jurídico com bots inteligentes
 - ✅ **WhatsApp em todos os planos** - Receba notificações diretamente no WhatsApp
 - ✅ **Busca manual ilimitada** - Consulte processos sem restrições
 - ✅ **IA integrada** - Resumos automáticos e explicação de termos jurídicos
@@ -28,9 +29,10 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 ## 🚀 Funcionalidades
 
 ### Core Features
+- 🤖 **Bot Conversacional (MCP)** - Interaja via WhatsApp, Telegram e Claude Chat
 - 📊 **Monitoramento Automático** - Acompanhe mudanças em processos 24/7
 - 📱 **Notificações Multicanal** - WhatsApp, Email, Telegram e Push
-- 🤖 **Assistente Virtual** - IA para análise e sumarização
+- 🧠 **Assistente Virtual** - IA para análise e sumarização jurídica
 - 📈 **Dashboard Analytics** - Visualize métricas e tendências
 - 🔍 **Busca Avançada** - Encontre processos rapidamente
 - 📄 **Geração de Documentos** - Templates personalizáveis
@@ -42,6 +44,8 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 |----------------|---------|--------------|----------|------------|
 | Processos | 50 | 200 | 500 | Ilimitado |
 | Usuários | 2 | 5 | 15 | Ilimitado |
+| **Bot MCP** | ❌ | ✅ | ✅ | ✅ |
+| **Comandos Bot/mês** | - | 200 | 1.000 | Ilimitado |
 | WhatsApp | ✅ | ✅ | ✅ | ✅ |
 | Busca Manual | Ilimitada | Ilimitada | Ilimitada | Ilimitada |
 | IA Resumos | 10/mês | 50/mês | 200/mês | Ilimitado |
@@ -67,8 +71,19 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Web App       │     │   Mobile App    │     │   WhatsApp Bot  │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
-         │                       │                         │
-         └───────────────────────┴─────────────────────────┘
+         │                       │                       │
+         └───────────────────────┴───────────────────────┴─────────┐
+                                                                    │
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐│
+│  Telegram Bot   │     │   Claude Chat   │     │    Slack Bot    ││
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘│
+         │                       │                       │         │
+         └───────────────────────┴───────────────────────┴─────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │   MCP Service   │  🤖 NOVO!
+                        │ (Bot Interface) │
+                        └────────┬────────┘
                                  │
                         ┌────────▼────────┐
                         │   API Gateway   │
