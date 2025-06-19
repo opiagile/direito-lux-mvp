@@ -499,6 +499,17 @@ testdata/generated/
 bin/
 build/
 
+# Go service binaries (executables)
+services/*/main
+services/*/server
+services/*/*.exe
+services/*/auth-server
+services/*/process-service
+
+# Backup files
+*.bak
+*.old
+
 # Local development certificates
 *.local.crt
 *.local.key
