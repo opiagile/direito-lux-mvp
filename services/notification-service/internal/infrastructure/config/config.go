@@ -37,6 +37,9 @@ type Config struct {
 
 	// WhatsApp
 	WhatsApp WhatsAppConfig
+
+	// Telegram
+	Telegram TelegramConfig
 }
 
 // DatabaseConfig configurações do PostgreSQL
@@ -102,6 +105,13 @@ type WhatsAppConfig struct {
 	PhoneNumberID string `envconfig:"WHATSAPP_PHONE_NUMBER_ID" required:"true"`
 	WebhookURL    string `envconfig:"WHATSAPP_WEBHOOK_URL"`
 	VerifyToken   string `envconfig:"WHATSAPP_VERIFY_TOKEN" required:"true"`
+}
+
+// TelegramConfig configurações do Telegram Bot API
+type TelegramConfig struct {
+	BotToken      string `envconfig:"TELEGRAM_BOT_TOKEN" required:"true"`
+	WebhookURL    string `envconfig:"TELEGRAM_WEBHOOK_URL"`
+	WebhookSecret string `envconfig:"TELEGRAM_WEBHOOK_SECRET"`
 }
 
 // Load carrega configuração a partir de variáveis de ambiente

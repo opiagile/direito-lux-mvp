@@ -42,6 +42,7 @@ func main() {
 		// Providers
 		fx.Provide(NewEmailProvider),
 		fx.Provide(NewWhatsAppProvider),
+		fx.Provide(NewTelegramProvider),
 		fx.Provide(NewProviderMap),
 		
 		// Queue (implementação simples em memória por enquanto)
@@ -138,14 +139,30 @@ func NewWhatsAppProvider(cfg *config.Config, logger *zap.Logger) domain.Notifica
 	return providers.NewWhatsAppProvider(whatsappConfig, logger)
 }
 
+// NewTelegramProvider cria provedor Telegram
+func NewTelegramProvider(cfg *config.Config, logger *zap.Logger) domain.NotificationProvider {
+	telegramConfig := providers.TelegramConfig{
+		BotToken:      cfg.Telegram.BotToken,
+		WebhookURL:    cfg.Telegram.WebhookURL,
+		WebhookSecret: cfg.Telegram.WebhookSecret,
+		Timeout:       30,
+		MaxRetries:    3,
+		RateLimit:     30,
+		ParseMode:     "HTML",
+	}
+	return providers.NewTelegramProvider(telegramConfig, logger)
+}
+
 // NewProviderMap cria mapa de provedores
 func NewProviderMap(
 	emailProvider domain.NotificationProvider,
 	whatsappProvider domain.NotificationProvider,
+	telegramProvider domain.NotificationProvider,
 ) map[domain.NotificationChannel]domain.NotificationProvider {
 	return map[domain.NotificationChannel]domain.NotificationProvider{
 		domain.NotificationChannelEmail:    emailProvider,
 		domain.NotificationChannelWhatsApp: whatsappProvider,
+		domain.NotificationChannelTelegram: telegramProvider,
 	}
 }
 
