@@ -256,7 +256,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-process
     environment:
-      - PORT=8080
+      - SERVER_PORT=8080
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev

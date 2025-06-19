@@ -1,0 +1,81 @@
+[tool.poetry]
+name = "ai-service"
+version = "0.1.0"
+description = "AI Service for Direito Lux - Jurisprudence Analysis and Document Generation"
+authors = ["Direito Lux Team <dev@direitolux.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.5.3"
+pydantic-settings = "^2.1.0"
+sqlalchemy = "^2.0.25"
+asyncpg = "^0.29.0"
+redis = "^5.0.1"
+aio-pika = "^9.3.1"
+httpx = "^0.26.0"
+prometheus-client = "^0.19.0"
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-instrumentation-fastapi = "^0.43b0"
+opentelemetry-instrumentation-sqlalchemy = "^0.43b0"
+python-multipart = "^0.0.6"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+alembic = "^1.13.1"
+structlog = "^24.1.0"
+tenacity = "^8.2.3"
+
+# AI/ML dependencies
+openai = "^1.10.0"
+langchain = "^0.1.5"
+langchain-openai = "^0.0.5"
+sentence-transformers = "^2.2.2"
+torch = "^2.1.2"
+numpy = "^1.26.3"
+pandas = "^2.1.4"
+scikit-learn = "^1.4.0"
+faiss-cpu = "^1.7.4"
+pgvector = "^0.2.4"
+transformers = "^4.37.0"
+huggingface-hub = "^0.20.2"
+tiktoken = "^0.5.2"
+beautifulsoup4 = "^4.12.3"
+lxml = "^5.1.0"
+unidecode = "^1.3.8"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-asyncio = "^0.23.3"
+pytest-cov = "^4.1.0"
+black = "^23.12.1"
+ruff = "^0.1.11"
+mypy = "^1.8.0"
+pre-commit = "^3.6.0"
+ipython = "^8.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+asyncio_mode = "auto"
