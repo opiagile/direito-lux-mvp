@@ -1,0 +1,2 @@
+-- Este arquivo será substituído pelo 01-create-direito-lux.sql
+-- Mantido vazio para evitar conflitos

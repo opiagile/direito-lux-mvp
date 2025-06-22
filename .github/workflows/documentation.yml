@@ -1,0 +1,459 @@
+name: 📚 Documentation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - 'services/**/README.md'
+      - 'services/**/docs/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - 'services/**/README.md'
+      - 'services/**/docs/**'
+  workflow_dispatch:
+
+jobs:
+  # Check documentation quality
+  doc-quality-check:
+    name: 📝 Documentation Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install markdown linter
+        run: |
+          npm install -g markdownlint-cli
+          npm install -g markdown-link-check
+      
+      - name: Lint markdown files
+        run: |
+          # Create markdownlint configuration
+          cat > .markdownlint.json << 'EOF'
+          {
+            "default": true,
+            "MD013": { "line_length": 120 },
+            "MD033": false,
+            "MD041": false
+          }
+          EOF
+          
+          # Run markdownlint
+          markdownlint . --ignore node_modules --ignore .git
+      
+      - name: Check markdown links
+        run: |
+          # Create link check configuration
+          cat > .markdown-link-check.json << 'EOF'
+          {
+            "timeout": "20s",
+            "retryOn429": true,
+            "retryCount": 3,
+            "fallbackOnError": false,
+            "aliveStatusCodes": [200, 206, 999],
+            "ignorePatterns": [
+              {
+                "pattern": "^http://localhost"
+              },
+              {
+                "pattern": "^https://localhost"
+              }
+            ]
+          }
+          EOF
+          
+          # Check links in markdown files
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | xargs -I {} markdown-link-check {} --config .markdown-link-check.json
+      
+      - name: Check documentation structure
+        run: |
+          echo "Checking documentation structure..."
+          
+          # Check for required documentation files
+          required_files=(
+            "README.md"
+            "ONBOARDING_GUIDE.md" 
+            "ARQUITETURA_FULLCYCLE.md"
+            "ROADMAP_IMPLEMENTACAO.md"
+          )
+          
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "❌ Missing required documentation files:"
+            printf '  - %s\n' "${missing_files[@]}"
+            exit 1
+          else
+            echo "✅ All required documentation files present"
+          fi
+          
+          # Check service documentation
+          for service_dir in services/*/; do
+            service_name=$(basename "$service_dir")
+            if [ ! -f "$service_dir/README.md" ]; then
+              echo "⚠️ Missing README.md in $service_name"
+            else
+              echo "✅ $service_name has README.md"
+            fi
+          done
+
+  # Generate API documentation
+  api-docs-generation:
+    name: 🔧 API Documentation Generation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Install swag (Swagger for Go)
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+      
+      - name: Generate Swagger docs for Go services
+        run: |
+          mkdir -p docs/api
+          
+          for service_dir in services/*/; do
+            if [ -f "$service_dir/go.mod" ]; then
+              service_name=$(basename "$service_dir")
+              echo "Generating API docs for $service_name"
+              
+              cd "$service_dir"
+              if [ -f "cmd/server/main.go" ]; then
+                # Generate Swagger documentation
+                swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+                
+                # Copy to central docs location
+                if [ -f "docs/swagger.json" ]; then
+                  cp docs/swagger.json "../../docs/api/${service_name}-swagger.json"
+                  echo "✅ Generated API docs for $service_name"
+                fi
+              fi
+              cd ../../
+            fi
+          done
+      
+      - name: Setup Python for AI service docs
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Generate AI service API docs
+        working-directory: services/ai-service
+        run: |
+          pip install -r requirements.txt
+          
+          # Create OpenAPI docs for FastAPI
+          cat > generate_docs.py << 'EOF'
+          import json
+          from app.main_local import app
+          
+          # Generate OpenAPI schema
+          openapi_schema = app.openapi()
+          
+          # Save to file
+          with open('../../docs/api/ai-service-openapi.json', 'w') as f:
+              json.dump(openapi_schema, f, indent=2)
+          
+          print("✅ Generated API docs for ai-service")
+          EOF
+          
+          python generate_docs.py
+      
+      - name: Setup Node.js for frontend docs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Generate frontend documentation
+        working-directory: frontend
+        run: |
+          npm ci
+          
+          # Install TypeDoc for TypeScript documentation
+          npm install --save-dev typedoc
+          
+          # Generate TypeScript documentation
+          npx typedoc src --out ../docs/frontend --name "Direito Lux Frontend"
+          
+          echo "✅ Generated frontend documentation"
+      
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-documentation
+          path: docs/
+
+  # Documentation site generation
+  docs-site-generation:
+    name: 🌐 Documentation Site Generation
+    runs-on: ubuntu-latest
+    needs: [doc-quality-check, api-docs-generation]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download API documentation
+        uses: actions/download-artifact@v3
+        with:
+          name: api-documentation
+          path: docs/
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install documentation tools
+        run: |
+          npm install -g @vuepress/cli vuepress
+          # Alternative: npm install -g gitbook-cli
+      
+      - name: Create documentation site structure
+        run: |
+          mkdir -p docs-site
+          
+          # Create VuePress configuration
+          cat > docs-site/.vuepress/config.js << 'EOF'
+          module.exports = {
+            title: 'Direito Lux Documentation',
+            description: 'Complete documentation for Direito Lux SaaS Platform',
+            base: '/direito-lux/',
+            themeConfig: {
+              nav: [
+                { text: 'Home', link: '/' },
+                { text: 'Getting Started', link: '/getting-started/' },
+                { text: 'Architecture', link: '/architecture/' },
+                { text: 'API Reference', link: '/api/' },
+                { text: 'Deployment', link: '/deployment/' }
+              ],
+              sidebar: {
+                '/getting-started/': [
+                  '',
+                  'installation',
+                  'configuration',
+                  'first-steps'
+                ],
+                '/architecture/': [
+                  '',
+                  'overview',
+                  'microservices',
+                  'database',
+                  'security'
+                ],
+                '/api/': [
+                  '',
+                  'auth-service',
+                  'tenant-service',
+                  'process-service',
+                  'ai-service'
+                ],
+                '/deployment/': [
+                  '',
+                  'local',
+                  'staging',
+                  'production'
+                ]
+              }
+            }
+          }
+          EOF
+          
+          # Create index page
+          cat > docs-site/README.md << 'EOF'
+          # Direito Lux Documentation
+          
+          Welcome to the comprehensive documentation for Direito Lux, a modern SaaS platform for legal process management.
+          
+          ## Quick Start
+          
+          - [Installation Guide](./getting-started/)
+          - [Architecture Overview](./architecture/)
+          - [API Reference](./api/)
+          - [Deployment Guide](./deployment/)
+          
+          ## Features
+          
+          - **Multi-tenant Architecture**: Secure isolation for different law firms
+          - **AI-Powered Analysis**: Intelligent document processing and jurisprudence search
+          - **Process Management**: Complete legal process lifecycle management
+          - **Real-time Notifications**: Multi-channel notification system
+          - **Advanced Reporting**: Comprehensive analytics and reporting
+          
+          ## Support
+          
+          For support and questions, please refer to our [GitHub Issues](https://github.com/your-org/direito-lux/issues).
+          EOF
+          
+          # Copy existing documentation
+          cp README.md docs-site/overview.md
+          cp ONBOARDING_GUIDE.md docs-site/getting-started/README.md
+          cp ARQUITETURA_FULLCYCLE.md docs-site/architecture/README.md
+          
+          # Copy API documentation
+          mkdir -p docs-site/api
+          cp docs/api/*.json docs-site/api/ 2>/dev/null || true
+      
+      - name: Build documentation site
+        run: |
+          cd docs-site
+          vuepress build
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs-site/.vuepress/dist
+          publish_branch: gh-pages
+
+  # Check for outdated documentation
+  docs-freshness-check:
+    name: 📅 Documentation Freshness Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git log
+      
+      - name: Check documentation freshness
+        run: |
+          echo "# 📅 Documentation Freshness Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check last update dates for key documentation files
+          docs_files=(
+            "README.md"
+            "ONBOARDING_GUIDE.md"
+            "ARQUITETURA_FULLCYCLE.md"
+            "ROADMAP_IMPLEMENTACAO.md"
+          )
+          
+          echo "| File | Last Updated | Days Ago | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          for file in "${docs_files[@]}"; do
+            if [ -f "$file" ]; then
+              last_commit_date=$(git log -1 --format="%cd" --date=short -- "$file")
+              days_ago=$(( ($(date +%s) - $(date -d "$last_commit_date" +%s)) / 86400 ))
+              
+              if [ $days_ago -lt 30 ]; then
+                status="✅ Fresh"
+              elif [ $days_ago -lt 90 ]; then
+                status="⚠️ Needs Review"
+              else
+                status="❌ Outdated"
+              fi
+              
+              echo "| $file | $last_commit_date | $days_ago | $status |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $file | - | - | ❌ Missing |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Review files marked as 'Needs Review' or 'Outdated'" >> $GITHUB_STEP_SUMMARY
+          echo "- Update documentation when making significant code changes" >> $GITHUB_STEP_SUMMARY
+          echo "- Consider setting up automated documentation updates" >> $GITHUB_STEP_SUMMARY
+
+  # Generate changelog
+  changelog-generation:
+    name: 📊 Changelog Generation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Generate changelog
+        run: |
+          # Install conventional-changelog-cli
+          npm install -g conventional-changelog-cli
+          
+          # Generate changelog
+          conventional-changelog -p angular -i CHANGELOG.md -s
+          
+          # Check if changelog was updated
+          if git diff --quiet CHANGELOG.md; then
+            echo "No changelog updates needed"
+          else
+            echo "Changelog updated"
+            
+            # Commit changelog if there are changes
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add CHANGELOG.md
+            git commit -m "docs: update changelog [skip ci]" || exit 0
+            git push
+          fi
+
+  # Documentation summary
+  docs-summary:
+    name: 📚 Documentation Summary
+    runs-on: ubuntu-latest
+    needs: [
+      doc-quality-check,
+      api-docs-generation,
+      docs-site-generation,
+      docs-freshness-check,
+      changelog-generation
+    ]
+    if: always()
+    steps:
+      - name: Generate documentation summary
+        run: |
+          echo "# 📚 Documentation Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Task | Status | Notes |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Check | ${{ needs.doc-quality-check.result == 'success' && '✅ Passed' || '❌ Failed' }} | Markdown linting and link checking |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Docs Generation | ${{ needs.api-docs-generation.result == 'success' && '✅ Passed' || needs.api-docs-generation.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Swagger/OpenAPI documentation |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs Site Generation | ${{ needs.docs-site-generation.result == 'success' && '✅ Passed' || needs.docs-site-generation.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | GitHub Pages documentation site |" >> $GITHUB_STEP_SUMMARY
+          echo "| Freshness Check | ${{ needs.docs-freshness-check.result == 'success' && '✅ Passed' || '❌ Failed' }} | Documentation update tracking |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changelog | ${{ needs.changelog-generation.result == 'success' && '✅ Passed' || needs.changelog-generation.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Automated changelog generation |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.doc-quality-check.result }}" != "success" ]; then
+            echo "- 🔍 Fix markdown linting issues" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.api-docs-generation.result }}" != "success" ] && [ "${{ needs.api-docs-generation.result }}" != "skipped" ]; then
+            echo "- 📝 Review API documentation generation errors" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- 📚 Review generated documentation site" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔄 Keep documentation updated with code changes" >> $GITHUB_STEP_SUMMARY

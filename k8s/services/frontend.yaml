@@ -1,0 +1,308 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: direito-lux-staging
+data:
+  NODE_ENV: "staging"
+  NEXT_PUBLIC_API_URL: "https://api-staging.direitolux.com"
+  NEXT_PUBLIC_AUTH_SERVICE_URL: "https://api-staging.direitolux.com/auth"
+  NEXT_PUBLIC_TENANT_SERVICE_URL: "https://api-staging.direitolux.com/tenants"
+  NEXT_PUBLIC_PROCESS_SERVICE_URL: "https://api-staging.direitolux.com/processes"
+  NEXT_PUBLIC_AI_SERVICE_URL: "https://api-staging.direitolux.com/ai"
+  NEXT_PUBLIC_SEARCH_SERVICE_URL: "https://api-staging.direitolux.com/search"
+  NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: "https://api-staging.direitolux.com/notifications"
+  NEXT_PUBLIC_REPORT_SERVICE_URL: "https://api-staging.direitolux.com/reports"
+  NEXT_PUBLIC_MCP_SERVICE_URL: "https://api-staging.direitolux.com/mcp"
+  NEXT_PUBLIC_APP_NAME: "Direito Lux - Staging"
+  NEXT_PUBLIC_APP_VERSION: "1.0.0"
+  NEXT_PUBLIC_SENTRY_DSN: ""
+  NEXT_PUBLIC_GOOGLE_ANALYTICS_ID: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: direito-lux-staging
+  labels:
+    app: frontend
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/your-org/direito-lux-frontend:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NODE_ENV
+        - name: NEXT_PUBLIC_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_API_URL
+        - name: NEXT_PUBLIC_AUTH_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_AUTH_SERVICE_URL
+        - name: NEXT_PUBLIC_TENANT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_TENANT_SERVICE_URL
+        - name: NEXT_PUBLIC_PROCESS_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_PROCESS_SERVICE_URL
+        - name: NEXT_PUBLIC_AI_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_AI_SERVICE_URL
+        - name: NEXT_PUBLIC_APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_APP_NAME
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: direito-lux-staging
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: direito-lux-staging
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+# Production namespace resources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: direito-lux-production
+data:
+  NODE_ENV: "production"
+  NEXT_PUBLIC_API_URL: "https://api.direitolux.com"
+  NEXT_PUBLIC_AUTH_SERVICE_URL: "https://api.direitolux.com/auth"
+  NEXT_PUBLIC_TENANT_SERVICE_URL: "https://api.direitolux.com/tenants"
+  NEXT_PUBLIC_PROCESS_SERVICE_URL: "https://api.direitolux.com/processes"
+  NEXT_PUBLIC_AI_SERVICE_URL: "https://api.direitolux.com/ai"
+  NEXT_PUBLIC_SEARCH_SERVICE_URL: "https://api.direitolux.com/search"
+  NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: "https://api.direitolux.com/notifications"
+  NEXT_PUBLIC_REPORT_SERVICE_URL: "https://api.direitolux.com/reports"
+  NEXT_PUBLIC_MCP_SERVICE_URL: "https://api.direitolux.com/mcp"
+  NEXT_PUBLIC_APP_NAME: "Direito Lux"
+  NEXT_PUBLIC_APP_VERSION: "1.0.0"
+  NEXT_PUBLIC_SENTRY_DSN: "https://your-sentry-dsn@sentry.io/project-id"
+  NEXT_PUBLIC_GOOGLE_ANALYTICS_ID: "GA-TRACKING-ID"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: direito-lux-production
+  labels:
+    app: frontend
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/your-org/direito-lux-frontend:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NODE_ENV
+        - name: NEXT_PUBLIC_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_API_URL
+        - name: NEXT_PUBLIC_AUTH_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_AUTH_SERVICE_URL
+        - name: NEXT_PUBLIC_TENANT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_TENANT_SERVICE_URL
+        - name: NEXT_PUBLIC_PROCESS_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_PROCESS_SERVICE_URL
+        - name: NEXT_PUBLIC_AI_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_AI_SERVICE_URL
+        - name: NEXT_PUBLIC_APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_APP_NAME
+        - name: NEXT_PUBLIC_SENTRY_DSN
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_SENTRY_DSN
+        - name: NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: direito-lux-production
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: direito-lux-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

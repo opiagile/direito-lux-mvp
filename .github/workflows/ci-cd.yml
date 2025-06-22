@@ -1,0 +1,435 @@
+name: 🚀 CI/CD Pipeline - Direito Lux
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'infrastructure/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'infrastructure/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository_owner }}/direito-lux
+
+jobs:
+  # Detect changes in different services
+  detect-changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      auth-service: ${{ steps.changes.outputs.auth-service }}
+      tenant-service: ${{ steps.changes.outputs.tenant-service }}
+      process-service: ${{ steps.changes.outputs.process-service }}
+      ai-service: ${{ steps.changes.outputs.ai-service }}
+      notification-service: ${{ steps.changes.outputs.notification-service }}
+      search-service: ${{ steps.changes.outputs.search-service }}
+      report-service: ${{ steps.changes.outputs.report-service }}
+      mcp-service: ${{ steps.changes.outputs.mcp-service }}
+      datajud-service: ${{ steps.changes.outputs.datajud-service }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            auth-service:
+              - 'services/auth-service/**'
+            tenant-service:
+              - 'services/tenant-service/**'
+            process-service:
+              - 'services/process-service/**'
+            ai-service:
+              - 'services/ai-service/**'
+            notification-service:
+              - 'services/notification-service/**'
+            search-service:
+              - 'services/search-service/**'
+            report-service:
+              - 'services/report-service/**'
+            mcp-service:
+              - 'services/mcp-service/**'
+            datajud-service:
+              - 'services/datajud-service/**'
+            frontend:
+              - 'frontend/**'
+            infrastructure:
+              - 'infrastructure/**'
+              - 'docker-compose*.yml'
+
+  # Lint and Test Frontend
+  frontend-test:
+    name: 🎨 Frontend Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Lint code
+        run: npm run lint
+      
+      - name: Type check
+        run: npm run type-check
+      
+      - name: Run tests
+        run: npm run test
+      
+      - name: Build application
+        run: npm run build
+
+  # Build and Test Go Services
+  go-services-test:
+    name: 🔧 Go Services Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.auth-service == 'true' ||
+      needs.detect-changes.outputs.tenant-service == 'true' ||
+      needs.detect-changes.outputs.process-service == 'true' ||
+      needs.detect-changes.outputs.notification-service == 'true' ||
+      needs.detect-changes.outputs.search-service == 'true' ||
+      needs.detect-changes.outputs.report-service == 'true' ||
+      needs.detect-changes.outputs.mcp-service == 'true' ||
+      needs.detect-changes.outputs.datajud-service == 'true'
+    strategy:
+      matrix:
+        service: [
+          { name: auth-service, path: services/auth-service, changed: ${{ needs.detect-changes.outputs.auth-service }} },
+          { name: tenant-service, path: services/tenant-service, changed: ${{ needs.detect-changes.outputs.tenant-service }} },
+          { name: process-service, path: services/process-service, changed: ${{ needs.detect-changes.outputs.process-service }} },
+          { name: notification-service, path: services/notification-service, changed: ${{ needs.detect-changes.outputs.notification-service }} },
+          { name: search-service, path: services/search-service, changed: ${{ needs.detect-changes.outputs.search-service }} },
+          { name: report-service, path: services/report-service, changed: ${{ needs.detect-changes.outputs.report-service }} },
+          { name: mcp-service, path: services/mcp-service, changed: ${{ needs.detect-changes.outputs.mcp-service }} },
+          { name: datajud-service, path: services/datajud-service, changed: ${{ needs.detect-changes.outputs.datajud-service }} }
+        ]
+        exclude:
+          - service: { changed: 'false' }
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: ${{ matrix.service.path }}/go.sum
+      
+      - name: Install dependencies
+        working-directory: ${{ matrix.service.path }}
+        run: go mod download
+      
+      - name: Lint code
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: ${{ matrix.service.path }}
+          skip-cache: true
+      
+      - name: Run tests
+        working-directory: ${{ matrix.service.path }}
+        run: go test -v -race -coverprofile=coverage.out ./...
+      
+      - name: Build service
+        working-directory: ${{ matrix.service.path }}
+        run: go build -o ./bin/${{ matrix.service.name }} ./cmd/server
+
+  # Test AI Service (Python)
+  ai-service-test:
+    name: 🤖 AI Service Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ai-service == 'true'
+    defaults:
+      run:
+        working-directory: ./services/ai-service
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/ai-service/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov ruff black
+      
+      - name: Lint with ruff
+        run: ruff check .
+      
+      - name: Format check with black
+        run: black --check .
+      
+      - name: Run tests
+        run: python -m pytest tests/ -v --cov=app --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./services/ai-service/coverage.xml
+          flags: ai-service
+
+  # Build Docker Images
+  build-images:
+    name: 🐳 Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [detect-changes, go-services-test, ai-service-test, frontend-test]
+    if: |
+      always() && 
+      (needs.go-services-test.result == 'success' || needs.go-services-test.result == 'skipped') &&
+      (needs.ai-service-test.result == 'success' || needs.ai-service-test.result == 'skipped') &&
+      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: auth-service
+            context: services/auth-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.auth-service }}
+          - service: tenant-service
+            context: services/tenant-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.tenant-service }}
+          - service: process-service
+            context: services/process-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.process-service }}
+          - service: ai-service
+            context: services/ai-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.ai-service }}
+          - service: notification-service
+            context: services/notification-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.notification-service }}
+          - service: search-service
+            context: services/search-service
+            dockerfile: Dockerfile.dev
+            changed: ${{ needs.detect-changes.outputs.search-service }}
+          - service: report-service
+            context: services/report-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.report-service }}
+          - service: mcp-service
+            context: services/mcp-service
+            dockerfile: Dockerfile.dev
+            changed: ${{ needs.detect-changes.outputs.mcp-service }}
+          - service: datajud-service
+            context: services/datajud-service
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.datajud-service }}
+          - service: frontend
+            context: frontend
+            dockerfile: Dockerfile
+            changed: ${{ needs.detect-changes.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.changed == 'true'
+      
+      - name: Log in to Container Registry
+        if: matrix.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Docker Buildx
+        if: matrix.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract metadata
+        if: matrix.changed == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        if: matrix.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Integration Tests
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-images]
+    if: |
+      always() && 
+      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped') &&
+      github.event_name == 'push'
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: direito_lux
+          POSTGRES_PASSWORD: dev_password_123
+          POSTGRES_DB: direito_lux_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Run Database Migrations
+        run: |
+          # Install migrate tool
+          curl -L https://packagecloud.io/golang-migrate/migrate/gpgkey | sudo apt-key add -
+          echo "deb https://packagecloud.io/golang-migrate/migrate/ubuntu/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/migrate.list
+          sudo apt-get update
+          sudo apt-get install -y migrate
+          
+          # Run migrations for each service
+          for service in services/*/migrations; do
+            if [ -d "$service" ]; then
+              echo "Running migrations for $service"
+              migrate -path "$service" -database "postgres://direito_lux:dev_password_123@localhost:5432/direito_lux_test?sslmode=disable" up
+            fi
+          done
+      
+      - name: Run Integration Tests
+        run: |
+          # Run integration tests for each service
+          for service_dir in services/*/; do
+            service_name=$(basename "$service_dir")
+            if [ -f "$service_dir/tests/integration" ]; then
+              echo "Running integration tests for $service_name"
+              cd "$service_dir"
+              go test -v ./tests/integration/... -tags=integration
+              cd ../../
+            fi
+          done
+
+  # Deploy to Development Environment
+  deploy-dev:
+    name: 🚀 Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: |
+      always() && 
+      (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') &&
+      github.ref == 'refs/heads/develop' &&
+      github.event_name == 'push'
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Development Environment
+        run: |
+          echo "🚀 Deploying to Development Environment"
+          echo "This would typically:"
+          echo "  - Update Docker Compose files with new image tags"
+          echo "  - Deploy to development server/cluster"
+          echo "  - Run smoke tests"
+          echo "  - Update deployment status"
+          
+          # For now, just output the deployment info
+          echo "✅ Development deployment completed"
+
+  # Deploy to Production
+  deploy-prod:
+    name: 🌟 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: |
+      always() && 
+      (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Production Environment
+        run: |
+          echo "🌟 Deploying to Production Environment"
+          echo "This would typically:"
+          echo "  - Update Kubernetes manifests with new image tags"
+          echo "  - Deploy to production cluster with rolling updates"
+          echo "  - Run comprehensive health checks"
+          echo "  - Update monitoring dashboards"
+          
+          # For now, just output the deployment info
+          echo "✅ Production deployment completed"
+
+  # Notify deployment status
+  notify:
+    name: 📢 Notify Status
+    runs-on: ubuntu-latest
+    needs: [deploy-dev, deploy-prod]
+    if: always()
+    steps:
+      - name: Notify deployment status
+        run: |
+          if [ "${{ needs.deploy-dev.result }}" == "success" ]; then
+            echo "✅ Development deployment successful"
+          fi
+          
+          if [ "${{ needs.deploy-prod.result }}" == "success" ]; then
+            echo "✅ Production deployment successful"
+          fi
+          
+          echo "📢 CI/CD Pipeline completed"

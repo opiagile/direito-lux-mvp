@@ -1,0 +1,211 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-access-policy
+  namespace: direito-lux-staging
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: backend
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 5672  # RabbitMQ
+  egress:
+  - {} # Allow all egress for database backups and replication
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-services-policy
+  namespace: direito-lux-staging
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    - podSelector:
+        matchLabels:
+          tier: backend
+    - namespaceSelector:
+        matchLabels:
+          name: nginx-ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: database
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: backend
+  - {} # Allow egress for external API calls
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-policy
+  namespace: direito-lux-staging
+spec:
+  podSelector:
+    matchLabels:
+      tier: frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: nginx-ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: backend
+  - {} # Allow egress for CDN and external resources
+---
+# Deny all default policy for staging
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: direito-lux-staging
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+# Production network policies (more restrictive)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-access-policy
+  namespace: direito-lux-production
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: backend
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 5672  # RabbitMQ
+  egress:
+  - to: []  # No external egress for production databases
+    ports:
+    - protocol: UDP
+      port: 53  # DNS only
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-services-policy
+  namespace: direito-lux-production
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    - podSelector:
+        matchLabels:
+          tier: backend
+    - namespaceSelector:
+        matchLabels:
+          name: nginx-ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: database
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: backend
+  - to: []  # External APIs
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+    - protocol: UDP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-policy
+  namespace: direito-lux-production
+spec:
+  podSelector:
+    matchLabels:
+      tier: frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: nginx-ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: backend
+  - to: []  # CDN and external resources
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+    - protocol: UDP
+      port: 53
+---
+# Deny all default policy for production
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: direito-lux-production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress

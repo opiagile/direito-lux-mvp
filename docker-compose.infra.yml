@@ -1,0 +1,113 @@
+version: '3.8'
+
+# Docker Compose apenas com INFRAESTRUTURA BASE
+# Use este arquivo se tiver problemas com o docker-compose completo
+
+services:
+  # PostgreSQL - Banco principal
+  postgres:
+    image: postgres:15
+    container_name: direito-lux-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/sql/init:/docker-entrypoint-initdb.d
+    networks:
+      - direito-lux-network
+
+  # Redis - Cache e sessões
+  redis:
+    image: redis:7-alpine
+    container_name: direito-lux-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass dev_redis_123
+    volumes:
+      - redis_data:/data
+    networks:
+      - direito-lux-network
+
+  # RabbitMQ - Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: direito-lux-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: direito_lux
+      RABBITMQ_DEFAULT_PASS: dev_rabbit_123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - direito-lux-network
+
+  # Elasticsearch - Search Engine
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: direito-lux-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - direito-lux-network
+
+  # MailHog - Email Testing
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: direito-lux-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - direito-lux-network
+
+  # pgAdmin - Database Management
+  pgadmin:
+    image: dpage/pgadmin4:8.1
+    container_name: direito-lux-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@direitolux.com
+      PGADMIN_DEFAULT_PASSWORD: dev_pgadmin_123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - direito-lux-network
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: direito-lux-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:dev_redis_123
+    ports:
+      - "8091:8081"
+    depends_on:
+      - redis
+    networks:
+      - direito-lux-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  pgadmin_data:
+
+networks:
+  direito-lux-network:
+    driver: bridge

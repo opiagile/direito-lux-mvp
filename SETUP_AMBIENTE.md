@@ -35,12 +35,30 @@ pip install poetry
 pip install pre-commit
 ```
 
-## 🚀 Setup Inicial
+## 🚀 Setup Local (Desenvolvimento)
 
 ### 1. Clonar o Repositório
 ```bash
 git clone https://github.com/direito-lux/direito-lux.git
 cd direito-lux
+```
+
+### 1.1. Setup Automatizado (Recomendado)
+```bash
+# Setup completo em 5 minutos
+chmod +x SETUP_MASTER_ONBOARDING.sh
+./SETUP_MASTER_ONBOARDING.sh
+
+# Verificar se funcionou
+./VERIFICAR_AMBIENTE_CORRIGIDO.sh
+```
+
+### 1.2. Setup Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+# Acessar: http://localhost:3000
 ```
 
 ### 2. Configurar Variáveis de Ambiente
@@ -349,6 +367,203 @@ docker-compose exec postgres pg_dump -U direito_lux direito_lux_dev > backup.sql
 
 # Restore
 docker-compose exec -T postgres psql -U direito_lux direito_lux_dev < backup.sql
+```
+
+## 🏗️ Setup Produção (GCP + Kubernetes)
+
+### Pré-requisitos para Produção
+```bash
+# Instalar ferramentas necessárias
+brew install google-cloud-sdk
+brew install kubernetes-cli
+brew install terraform
+
+# Autenticar com GCP
+gcloud auth login
+gcloud auth application-default login
+
+# Configurar projeto
+gcloud config set project direito-lux-production
+```
+
+### 1. Infraestrutura (Terraform)
+
+#### 1.1. Deploy Infraestrutura Staging
+```bash
+cd terraform
+
+# Tornar script executável
+chmod +x deploy.sh
+
+# Inicializar
+./deploy.sh staging init
+
+# Planejar
+./deploy.sh staging plan
+
+# Aplicar
+./deploy.sh staging apply
+```
+
+#### 1.2. Deploy Infraestrutura Production
+```bash
+# Validar staging primeiro, depois
+./deploy.sh production apply
+```
+
+#### 1.3. Verificar Infraestrutura
+```bash
+# Ver outputs
+./deploy.sh production output
+
+# Verificar no console GCP
+gcloud compute instances list
+gcloud container clusters list
+gcloud sql instances list
+```
+
+### 2. Aplicações (Kubernetes)
+
+#### 2.1. Deploy Staging
+```bash
+cd k8s
+
+# Tornar script executável
+chmod +x deploy.sh
+
+# Deploy staging
+./deploy.sh staging --apply
+
+# Verificar status
+kubectl get pods -n direito-lux-staging
+kubectl get services -n direito-lux-staging
+kubectl get ingress -n direito-lux-staging
+```
+
+#### 2.2. Deploy Production
+```bash
+# Deploy production (após validação staging)
+./deploy.sh production --apply
+
+# Verificar status
+kubectl get all -n direito-lux-production
+
+# Verificar URLs
+kubectl get ingress -n direito-lux-production
+```
+
+### 3. CI/CD Pipeline
+
+#### 3.1. Configurar Secrets GitHub
+No GitHub, vá em Settings > Secrets and Variables > Actions:
+
+```bash
+# Secrets necessários
+GCP_PROJECT=direito-lux-production
+GCP_SA_KEY=<base64-encoded-service-account-key>
+GKE_CLUSTER_URL=<cluster-endpoint>
+GKE_SA_KEY=<base64-encoded-kubeconfig>
+```
+
+#### 3.2. Ativar Workflows
+```bash
+# Push para develop = deploy staging automático
+git checkout develop
+git push origin develop
+
+# Push para main = deploy production automático
+git checkout main
+git merge develop
+git push origin main
+```
+
+### 4. Monitoramento e Observabilidade
+
+#### 4.1. Acessar Dashboards
+```bash
+# Grafana
+kubectl port-forward -n monitoring svc/grafana 3000:80
+
+# Prometheus
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
+
+# Jaeger
+kubectl port-forward -n monitoring svc/jaeger 16686:16686
+```
+
+#### 4.2. Logs Centralizados
+```bash
+# Ver logs de um pod
+kubectl logs -f deployment/auth-service -n direito-lux-production
+
+# Ver logs de todos os pods de um serviço
+kubectl logs -f -l app=auth-service -n direito-lux-production
+
+# Kibana (se configurado)
+kubectl port-forward -n monitoring svc/kibana 5601:5601
+```
+
+### 5. Operações de Produção
+
+#### 5.1. Scaling Manual
+```bash
+# Escalar deployment
+kubectl scale deployment auth-service --replicas=10 -n direito-lux-production
+
+# Ver status HPA
+kubectl get hpa -n direito-lux-production
+```
+
+#### 5.2. Rolling Updates
+```bash
+# Atualizar imagem
+kubectl set image deployment/auth-service \
+  auth-service=gcr.io/direito-lux-production/auth-service:v2.0.0 \
+  -n direito-lux-production
+
+# Ver status do rollout
+kubectl rollout status deployment/auth-service -n direito-lux-production
+
+# Rollback se necessário
+kubectl rollout undo deployment/auth-service -n direito-lux-production
+```
+
+#### 5.3. Backup e Restore
+```bash
+# Backup automático (Cloud SQL)
+gcloud sql backups list --instance=direito-lux-db-production
+
+# Restore se necessário
+gcloud sql backups restore <backup-id> \
+  --restore-instance=direito-lux-db-production
+```
+
+### 6. URLs de Produção
+
+| Serviço | URL | Descrição |
+|---------|-----|-----------|
+| **Web App** | https://app.direitolux.com | Frontend principal |
+| **API Gateway** | https://api.direitolux.com | APIs REST |
+| **Admin** | https://admin.direitolux.com | Painel administrativo |
+| **Monitoring** | https://monitoring.direitolux.com | Grafana dashboards |
+| **Status** | https://status.direitolux.com | Status page |
+
+### 7. Disaster Recovery
+
+#### 7.1. Backup Strategy
+- **Database**: Backups automáticos diários
+- **Persistent Volumes**: Snapshots automáticos
+- **Configuration**: Terraform state em GCS
+- **Secrets**: Backup em Cloud Secret Manager
+
+#### 7.2. Recovery Procedures
+```bash
+# Restore completo
+./terraform/deploy.sh production apply --auto-approve
+./k8s/deploy.sh production --apply
+
+# Restore database specific
+gcloud sql backups restore <backup-id> --restore-instance=<instance>
 ```
 
 ## 🚀 Próximos Passos

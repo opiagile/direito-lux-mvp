@@ -1,7 +1,7 @@
-# Direito Lux - Plataforma de Monitoramento Jurídico
+# 🚀 Direito Lux - Plataforma SaaS Jurídica com IA
 
 <p align="center">
-  <strong>🏛️ Automatize o monitoramento de processos jurídicos com IA 🤖</strong>
+  <strong>🏛️ Sistema completo de gestão jurídica com IA integrada e arquitetura cloud-native 🤖</strong>
 </p>
 
 <p align="center">
@@ -9,6 +9,7 @@
   <a href="#-funcionalidades">Funcionalidades</a> •
   <a href="#-arquitetura">Arquitetura</a> •
   <a href="#-começando">Começando</a> •
+  <a href="#-deploy">Deploy</a> •
   <a href="#-documentação">Documentação</a> •
   <a href="#-status">Status</a>
 </p>
@@ -55,15 +56,19 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 
 ### Stack Tecnológica
 
-- **Backend**: Go 1.21+ (microserviços)
-- **AI/ML**: Python 3.11+ (FastAPI)
-- **Frontend**: Next.js 14 + TypeScript
-- **Mobile**: React Native + Expo
-- **Database**: PostgreSQL 15 + Redis
-- **Message Queue**: RabbitMQ
-- **Cloud**: Google Cloud Platform
-- **Orquestração**: Kubernetes (GKE)
+- **Backend**: Go 1.21+ (microserviços com arquitetura hexagonal)
+- **AI/ML**: Python 3.11+ (FastAPI - versão leve local, completa no GCP)
+- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
+- **Mobile**: React Native + Expo (planejado)
+- **Database**: PostgreSQL 15 + Redis 7
+- **Message Queue**: RabbitMQ 3
+- **Search**: Elasticsearch 8
+- **Cloud**: Google Cloud Platform (GKE, Cloud SQL, Cloud CDN)
+- **Orquestração**: Kubernetes (GKE) com manifests completos
+- **IaC**: Terraform para toda infraestrutura GCP
+- **CI/CD**: GitHub Actions com pipelines completos
 - **Observabilidade**: Prometheus + Grafana + Jaeger
+- **Security**: Network Policies, RBAC, Workload Identity
 
 ### Arquitetura de Microserviços
 
@@ -103,6 +108,71 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 └────────────┘  └────────────┘  └────────────┘  └─────────────┘
 ```
 
+## 📦 Infraestrutura e Deploy
+
+### 🏗️ Infrastructure as Code - Terraform (GCP)
+
+Nossa infraestrutura completa está codificada em Terraform:
+
+```bash
+# Deploy infraestrutura staging
+cd terraform
+./deploy.sh staging init
+./deploy.sh staging plan
+./deploy.sh staging apply
+
+# Deploy infraestrutura production
+./deploy.sh production init
+./deploy.sh production apply
+```
+
+**Recursos provisionados:**
+- VPC com subnets segmentadas
+- GKE cluster regional com auto-scaling
+- Cloud SQL PostgreSQL com HA e read replicas
+- Redis com persistência
+- Load Balancer global com SSL
+- Cloud DNS e certificados gerenciados
+- Monitoring e logging centralizados
+
+### ☸️ Kubernetes - Deploy de Aplicações
+
+Deploy completo em Kubernetes com manifests prontos:
+
+```bash
+# Deploy aplicações staging
+cd k8s
+./deploy.sh staging --apply
+
+# Deploy aplicações production
+./deploy.sh production --apply
+```
+
+**Recursos configurados:**
+- Deployments com HPA (auto-scaling)
+- Services e Ingress com SSL
+- ConfigMaps e Secrets
+- Network Policies
+- PVCs para persistência
+- Prometheus e Grafana
+
+### 🔄 CI/CD Pipeline - GitHub Actions
+
+Pipeline completo automatizado:
+
+1. **Build & Test**: Validação em cada PR
+2. **Security Scanning**: SAST, dependency check, secrets
+3. **Performance Tests**: Load, stress, database
+4. **Deploy Staging**: Push para develop
+5. **Deploy Production**: Push para main
+
+Workflows implementados:
+- `.github/workflows/ci-cd.yml` - Pipeline principal
+- `.github/workflows/security.yml` - Scanning de segurança
+- `.github/workflows/dependencies.yml` - Atualização automática
+- `.github/workflows/performance.yml` - Testes de performance
+- `.github/workflows/documentation.yml` - Docs automática
+
 ## 🚀 Começando
 
 ### Pré-requisitos
@@ -111,27 +181,48 @@ O **Direito Lux** é uma plataforma SaaS inovadora para monitoramento automatiza
 - Go 1.21+
 - Node.js 18+
 - Python 3.11+
+- kubectl & Terraform (para deploy cloud)
 - Make
 
-### 🎯 Quick Start - Deploy DEV (NOVO)
+### 🎯 Quick Start - Setup Local Completo
 
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/direito-lux/direito-lux.git
-cd direito-lux/services
+cd direito-lux
 
-# 2. Deploy automatizado completo (primeira vez)
-chmod +x scripts/deploy-dev.sh
-./scripts/deploy-dev.sh --clean --build
+# 2. Setup completo automatizado (NOVO! 🎉)
+./SETUP_MASTER_ONBOARDING.sh
 
-# 3. Verificar serviços rodando
-./scripts/deploy-dev.sh status
+# Isso irá:
+# ✅ Configurar todo ambiente Docker
+# ✅ Criar bancos de dados e executar migrations
+# ✅ Popular dados de teste (8 tenants, 32 usuários, 100 processos)
+# ✅ Iniciar todos os serviços
+# ✅ Verificar saúde dos serviços
 
-# 4. Testar conectividade
-./scripts/deploy-dev.sh test
+# 3. Acessar aplicação
+# Frontend: http://localhost:3000
+# API Docs: http://localhost:8080/docs
+```
 
-# 5. Ver logs em tempo real
-./scripts/deploy-dev.sh logs
+### 🚀 Scripts de Setup Disponíveis
+
+```bash
+# Setup completo (recomendado)
+./SETUP_MASTER_ONBOARDING.sh
+
+# Setup apenas Docker e infraestrutura
+./SETUP_DOCKER_CORRETO.sh
+
+# Inserir dados de teste
+./INSERIR_DADOS_TESTE.sh
+
+# Executar migrations
+./EXECUTAR_TODAS_MIGRATIONS.sh
+
+# Verificar ambiente
+./VERIFICAR_AMBIENTE.sh
 ```
 
 ### 🔧 Comandos Úteis
@@ -171,14 +262,28 @@ docker-compose down
 
 ### 📋 Documentação Principal
 - [**Status da Implementação**](./STATUS_IMPLEMENTACAO.md) - ✅ O que está pronto e ❌ o que falta
-- [**Deploy DEV**](./services/README-DEPLOYMENT.md) - 🚀 Guia de deploy automatizado
-- [**Diretrizes de Desenvolvimento**](./DIRETRIZES_DESENVOLVIMENTO.md) - 📐 Padrões e convenções obrigatórias
+- [**Onboarding Guide**](./ONBOARDING_GUIDE.md) - 🎯 Guia para novos desenvolvedores
 - [**Setup do Ambiente**](./SETUP_AMBIENTE.md) - 🔧 Guia completo de instalação
-- [**Visão Geral**](./VISAO_GERAL_DIREITO_LUX.md) - 🎯 Detalhes do produto e planos
 - [**Arquitetura Full Cycle**](./ARQUITETURA_FULLCYCLE.md) - 🏗️ Arquitetura técnica detalhada
-- [**Event Storming**](./EVENT_STORMING_DIREITO_LUX.md) - 📊 Domain modeling
 - [**Roadmap**](./ROADMAP_IMPLEMENTACAO.md) - 🗓️ Plano de implementação
-- [**MCP Service**](./services/mcp-service/MCP_SERVICE.md) - 🤖 Model Context Protocol (diferencial)
+
+### 🏗️ Infraestrutura e Deploy
+- [**Kubernetes Guide**](./k8s/README.md) - ☸️ Deploy completo em K8s
+- [**Terraform Guide**](./terraform/README.md) - 🏗️ Infrastructure as Code no GCP
+- [**CI/CD Pipelines**](./.github/workflows/) - 🔄 GitHub Actions workflows
+- [**Deploy DEV**](./services/README-DEPLOYMENT.md) - 🚀 Deploy local automatizado
+
+### 🎯 Documentação de Domínio
+- [**Visão Geral**](./VISAO_GERAL_DIREITO_LUX.md) - 🎯 Detalhes do produto e planos
+- [**Event Storming**](./EVENT_STORMING_DIREITO_LUX.md) - 📊 Domain modeling
+- [**Bounded Contexts**](./BOUNDED_CONTEXTS.md) - 🔲 Contextos delimitados
+- [**Domain Events**](./DOMAIN_EVENTS.md) - 📨 Eventos de domínio
+- [**Ubiquitous Language**](./UBIQUITOUS_LANGUAGE.md) - 📖 Linguagem ubíqua
+
+### 🤖 Serviços Especiais
+- [**MCP Service**](./MCP_SERVICE.md) - 🤖 Model Context Protocol (diferencial)
+- [**AI Service**](./AI_SERVICE.md) - 🧠 Serviço de IA (local leve, GCP completo)
+- [**Frontend Web App**](./FRONTEND_WEB_APP.md) - 🎨 Documentação do frontend
 
 ### 🔗 URLs de Desenvolvimento (Deploy DEV)
 

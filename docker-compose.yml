@@ -7,19 +7,20 @@ services:
   
   # PostgreSQL - Banco principal
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: direito-lux-postgres
     environment:
-      POSTGRES_USER: direito_lux
-      POSTGRES_PASSWORD: dev_password_123
-      POSTGRES_DB: direito_lux_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/sql/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U direito_lux"]
+      test: ["CMD-SHELL", "pg_isready -U direito_lux -d direito_lux_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -520,7 +521,7 @@ services:
       HTTP_USER: admin
       HTTP_PASSWORD: dev_redis_ui_123
     ports:
-      - "8081:8081"
+      - "8091:8081"
     depends_on:
       redis:
         condition: service_healthy

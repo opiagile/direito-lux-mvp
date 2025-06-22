@@ -1,0 +1,561 @@
+name: ⚡ Performance Monitoring
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run performance tests daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of performance test to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - load
+          - stress
+          - spike
+          - volume
+          - endurance
+
+jobs:
+  # Build Performance Test Environment
+  build-perf-env:
+    name: 🏗️ Build Performance Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      test-env-ready: ${{ steps.setup.outputs.ready }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: direito_lux
+          POSTGRES_PASSWORD: dev_password_123
+          POSTGRES_DB: direito_lux_perf
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+        ports:
+          - 5672:5672
+          - 15672:15672
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup test environment
+        id: setup
+        run: |
+          echo "Setting up performance test environment"
+          echo "ready=true" >> $GITHUB_OUTPUT
+      
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      
+      - name: Setup Go for service builds
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Build test services
+        run: |
+          # Build key services for performance testing
+          for service in auth-service tenant-service process-service; do
+            if [ -d "services/$service" ]; then
+              echo "Building $service"
+              cd "services/$service"
+              go build -o "../../test-bins/$service" ./cmd/server
+              cd ../../
+            fi
+          done
+          
+          # Make test binaries directory
+          mkdir -p test-bins
+
+  # Load Testing
+  load-testing:
+    name: 📊 Load Testing
+    runs-on: ubuntu-latest
+    needs: build-perf-env
+    if: |
+      needs.build-perf-env.outputs.test-env-ready == 'true' &&
+      (github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'load' || github.event_name != 'workflow_dispatch')
+    strategy:
+      matrix:
+        service: [auth-service, tenant-service, process-service]
+        test_scenario: [baseline, peak_load]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create k6 test script for ${{ matrix.service }}
+        run: |
+          mkdir -p performance-tests
+          cat > performance-tests/${{ matrix.service }}-${{ matrix.test_scenario }}.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate, Trend } from 'k6/metrics';
+          
+          // Custom metrics
+          const errorRate = new Rate('errors');
+          const responseTime = new Trend('response_time');
+          
+          // Test configuration
+          export const options = {
+            scenarios: {
+              ${{ matrix.test_scenario }}: {
+                executor: '${{ matrix.test_scenario == "baseline" && "constant-vus" || "ramping-vus" }}',
+                ${{ matrix.test_scenario == "baseline" && 'vus: 10, duration: "2m"' || 'startVUs: 0, stages: [{ duration: "1m", target: 50 }, { duration: "2m", target: 50 }, { duration: "1m", target: 0 }]' }},
+              },
+            },
+            thresholds: {
+              http_req_duration: ['p(95)<500'], // 95% of requests must complete below 500ms
+              http_req_failed: ['rate<0.05'], // Error rate must be below 5%
+              errors: ['rate<0.05'],
+            },
+          };
+          
+          const BASE_URL = 'http://localhost:8080'; // Service port
+          
+          export default function () {
+            let response;
+            
+            // Test scenarios based on service
+            switch ('${{ matrix.service }}') {
+              case 'auth-service':
+                // Test authentication endpoints
+                response = http.post(`${BASE_URL}/api/v1/auth/login`, 
+                  JSON.stringify({
+                    email: 'test@example.com',
+                    password: 'password123'
+                  }), 
+                  { headers: { 'Content-Type': 'application/json' } }
+                );
+                break;
+                
+              case 'tenant-service':
+                // Test tenant management
+                response = http.get(`${BASE_URL}/api/v1/tenants`);
+                break;
+                
+              case 'process-service':
+                // Test process queries
+                response = http.get(`${BASE_URL}/api/v1/processes`);
+                break;
+                
+              default:
+                response = http.get(`${BASE_URL}/health`);
+            }
+            
+            // Check response
+            const success = check(response, {
+              'status is 200 or 201': (r) => r.status === 200 || r.status === 201,
+              'response time < 500ms': (r) => r.timings.duration < 500,
+            });
+            
+            errorRate.add(!success);
+            responseTime.add(response.timings.duration);
+            
+            sleep(1);
+          }
+          
+          export function handleSummary(data) {
+            return {
+              'performance-results/${{ matrix.service }}-${{ matrix.test_scenario }}.json': JSON.stringify(data),
+            };
+          }
+          EOF
+      
+      - name: Run k6 load test
+        run: |
+          mkdir -p performance-results
+          k6 run performance-tests/${{ matrix.service }}-${{ matrix.test_scenario }}.js
+      
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results-${{ matrix.service }}-${{ matrix.test_scenario }}
+          path: performance-results/
+
+  # Stress Testing
+  stress-testing:
+    name: 💪 Stress Testing
+    runs-on: ubuntu-latest
+    needs: build-perf-env
+    if: |
+      needs.build-perf-env.outputs.test-env-ready == 'true' &&
+      (github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'stress')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create stress test script
+        run: |
+          mkdir -p performance-tests
+          cat > performance-tests/stress-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          
+          export const options = {
+            scenarios: {
+              stress: {
+                executor: 'ramping-vus',
+                startVUs: 0,
+                stages: [
+                  { duration: '2m', target: 100 }, // Ramp up to 100 users
+                  { duration: '5m', target: 100 }, // Stay at 100 users
+                  { duration: '2m', target: 200 }, // Ramp up to 200 users
+                  { duration: '5m', target: 200 }, // Stay at 200 users
+                  { duration: '2m', target: 300 }, // Ramp up to 300 users
+                  { duration: '5m', target: 300 }, // Stay at 300 users
+                  { duration: '2m', target: 0 },   // Ramp down to 0 users
+                ],
+              },
+            },
+            thresholds: {
+              http_req_duration: ['p(99)<1000'], // 99% of requests must complete below 1s
+              http_req_failed: ['rate<0.1'], // Error rate must be below 10%
+            },
+          };
+          
+          export default function () {
+            const responses = http.batch([
+              ['GET', 'http://localhost:8080/health'],
+              ['GET', 'http://localhost:8081/health'],
+              ['GET', 'http://localhost:8082/health'],
+            ]);
+            
+            responses.forEach((response) => {
+              check(response, {
+                'status is 200': (r) => r.status === 200,
+                'response time OK': (r) => r.timings.duration < 1000,
+              });
+            });
+            
+            sleep(1);
+          }
+          EOF
+      
+      - name: Run stress test
+        run: |
+          mkdir -p performance-results
+          k6 run --out json=performance-results/stress-test.json performance-tests/stress-test.js
+
+  # Database Performance Testing
+  database-performance:
+    name: 🗄️ Database Performance
+    runs-on: ubuntu-latest
+    needs: build-perf-env
+    if: |
+      needs.build-perf-env.outputs.test-env-ready == 'true' &&
+      (github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'volume')
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: direito_lux
+          POSTGRES_PASSWORD: dev_password_123
+          POSTGRES_DB: direito_lux_perf
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Create test data
+        run: |
+          # Create test data for performance testing
+          cat > create_test_data.sql << 'EOF'
+          -- Create test tenants
+          INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
+          SELECT 
+            gen_random_uuid(),
+            'Tenant ' || generate_series,
+            'tenant' || generate_series || '.example.com',
+            'active',
+            NOW() - (generate_series || ' days')::interval,
+            NOW()
+          FROM generate_series(1, 1000);
+          
+          -- Create test users
+          INSERT INTO users (id, email, password_hash, role, tenant_id, status, first_name, last_name, created_at, updated_at)
+          SELECT 
+            gen_random_uuid(),
+            'user' || generate_series || '@example.com',
+            '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+            'user',
+            (SELECT id FROM tenants ORDER BY RANDOM() LIMIT 1),
+            'active',
+            'User',
+            'Test ' || generate_series,
+            NOW() - (generate_series || ' hours')::interval,
+            NOW()
+          FROM generate_series(1, 10000);
+          
+          -- Create test processes
+          INSERT INTO processes (id, number, court, tenant_id, status, created_at, updated_at)
+          SELECT 
+            gen_random_uuid(),
+            '000' || generate_series || '-12.2024.5.01.0001',
+            'Tribunal de Justiça',
+            (SELECT id FROM tenants ORDER BY RANDOM() LIMIT 1),
+            'active',
+            NOW() - (generate_series || ' minutes')::interval,
+            NOW()
+          FROM generate_series(1, 50000);
+          EOF
+      
+      - name: Run database performance tests
+        run: |
+          # Run migrations first
+          PGPASSWORD=dev_password_123 psql -h localhost -U direito_lux -d direito_lux_perf -c "
+            CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+            CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";
+          "
+          
+          # Create tables (simplified for testing)
+          PGPASSWORD=dev_password_123 psql -h localhost -U direito_lux -d direito_lux_perf -c "
+            CREATE TABLE IF NOT EXISTS tenants (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              name VARCHAR(255) NOT NULL,
+              domain VARCHAR(255) UNIQUE NOT NULL,
+              status VARCHAR(50) DEFAULT 'active',
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS users (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              email VARCHAR(255) UNIQUE NOT NULL,
+              password_hash VARCHAR(255) NOT NULL,
+              role VARCHAR(50) DEFAULT 'user',
+              tenant_id UUID REFERENCES tenants(id),
+              status VARCHAR(50) DEFAULT 'active',
+              first_name VARCHAR(100),
+              last_name VARCHAR(100),
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS processes (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              number VARCHAR(255) UNIQUE NOT NULL,
+              court VARCHAR(255),
+              tenant_id UUID REFERENCES tenants(id),
+              status VARCHAR(50) DEFAULT 'active',
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+          "
+          
+          # Load test data
+          PGPASSWORD=dev_password_123 psql -h localhost -U direito_lux -d direito_lux_perf -f create_test_data.sql
+          
+          # Run performance queries and measure execution time
+          echo "Running database performance tests..."
+          
+          PGPASSWORD=dev_password_123 psql -h localhost -U direito_lux -d direito_lux_perf -c "
+            \timing on
+            
+            -- Test 1: Select with joins
+            SELECT COUNT(*) FROM users u JOIN tenants t ON u.tenant_id = t.id WHERE t.status = 'active';
+            
+            -- Test 2: Complex aggregation
+            SELECT t.name, COUNT(u.id) as user_count, COUNT(p.id) as process_count
+            FROM tenants t
+            LEFT JOIN users u ON t.id = u.tenant_id
+            LEFT JOIN processes p ON t.id = p.tenant_id
+            WHERE t.status = 'active'
+            GROUP BY t.id, t.name
+            ORDER BY user_count DESC
+            LIMIT 100;
+            
+            -- Test 3: Full-text search simulation
+            SELECT * FROM users WHERE email ILIKE '%test%' LIMIT 100;
+            
+            -- Test 4: Date range queries
+            SELECT COUNT(*) FROM processes WHERE created_at >= NOW() - INTERVAL '30 days';
+          " > performance-results/database-performance.log
+      
+      - name: Upload database performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: database-performance-results
+          path: performance-results/database-performance.log
+
+  # Frontend Performance Testing
+  frontend-performance:
+    name: 🎨 Frontend Performance
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.test_type == 'all' || 
+      github.event.inputs.test_type == 'frontend' ||
+      github.event_name != 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+      
+      - name: Run Lighthouse CI
+        working-directory: frontend
+        run: |
+          # Create Lighthouse CI configuration
+          cat > lighthouserc.js << 'EOF'
+          module.exports = {
+            ci: {
+              collect: {
+                staticDistDir: './dist',
+                url: ['http://localhost:3000'],
+                numberOfRuns: 3,
+              },
+              assert: {
+                assertions: {
+                  'categories:performance': ['warn', {minScore: 0.8}],
+                  'categories:accessibility': ['error', {minScore: 0.9}],
+                  'categories:best-practices': ['warn', {minScore: 0.8}],
+                  'categories:seo': ['warn', {minScore: 0.8}],
+                },
+              },
+              upload: {
+                target: 'temporary-public-storage',
+              },
+            },
+          };
+          EOF
+          
+          # Start development server in background
+          npm start &
+          sleep 30
+          
+          # Run Lighthouse CI
+          lhci autorun
+      
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+  # Performance Summary Report
+  performance-summary:
+    name: 📊 Performance Summary
+    runs-on: ubuntu-latest
+    needs: [
+      load-testing,
+      stress-testing,
+      database-performance,
+      frontend-performance
+    ]
+    if: always()
+    steps:
+      - name: Download all performance results
+        uses: actions/download-artifact@v3
+        with:
+          path: performance-results/
+      
+      - name: Generate performance summary
+        run: |
+          echo "# ⚡ Performance Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Type**: ${{ github.event.inputs.test_type || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Category | Status | Notes |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Load Testing | ${{ needs.load-testing.result == 'success' && '✅ Passed' || needs.load-testing.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Service load and response time testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stress Testing | ${{ needs.stress-testing.result == 'success' && '✅ Passed' || needs.stress-testing.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | High load and breaking point testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| Database Performance | ${{ needs.database-performance.result == 'success' && '✅ Passed' || needs.database-performance.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Database query and volume testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Performance | ${{ needs.frontend-performance.result == 'success' && '✅ Passed' || needs.frontend-performance.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Lighthouse and frontend metrics |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🎯 Performance Thresholds" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Response Time**: p95 < 500ms" >> $GITHUB_STEP_SUMMARY
+          echo "- **Error Rate**: < 5%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Throughput**: > 100 requests/second" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database Queries**: < 100ms for simple queries" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend Performance**: Lighthouse score > 80" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📈 Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.load-testing.result }}" != "success" ]; then
+            echo "- 🔍 Investigate load testing failures" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.stress-testing.result }}" != "success" ]; then
+            echo "- 💪 Review stress testing results for bottlenecks" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.database-performance.result }}" != "success" ]; then
+            echo "- 🗄️ Optimize database queries and indexes" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.frontend-performance.result }}" != "success" ]; then
+            echo "- 🎨 Optimize frontend bundle size and loading" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- 📊 Review detailed performance metrics in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔄 Set up continuous performance monitoring" >> $GITHUB_STEP_SUMMARY

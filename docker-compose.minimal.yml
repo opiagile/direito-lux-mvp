@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # PostgreSQL apenas
+  postgres:
+    image: postgres:15
+    platform: linux/arm64
+    container_name: direito-lux-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/sql/init:/docker-entrypoint-initdb.d
+
+  # Redis apenas
+  redis:
+    image: redis:7-alpine
+    platform: linux/arm64
+    container_name: direito-lux-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass dev_redis_123
+
+  # MailPit (email testing)
+  mailpit:
+    image: axllent/mailpit:latest
+    platform: linux/arm64
+    container_name: direito-lux-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:

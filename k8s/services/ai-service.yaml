@@ -1,0 +1,468 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-service-config
+  namespace: direito-lux-staging
+data:
+  PORT: "8000"
+  ENVIRONMENT: "staging"
+  DEPLOYMENT_MODE: "gcp"
+  LOG_LEVEL: "info"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "direito_lux_staging"
+  DB_USER: "direito_lux"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "2"
+  AUTH_SERVICE_URL: "http://auth-service:8080"
+  TENANT_SERVICE_URL: "http://tenant-service:8080"
+  PROCESS_SERVICE_URL: "http://process-service:8080"
+  OPENAI_MODEL: "gpt-3.5-turbo"
+  OPENAI_EMBEDDINGS_MODEL: "text-embedding-ada-002"
+  OPENAI_MAX_TOKENS: "2000"
+  OPENAI_TEMPERATURE: "0.7"
+  HUGGINGFACE_MODEL_NAME: "sentence-transformers/all-MiniLM-L6-v2"
+  VECTOR_STORE_TYPE: "faiss"
+  EMBEDDING_DIMENSION: "384"
+  MAX_SEARCH_RESULTS: "50"
+  SIMILARITY_THRESHOLD: "0.7"
+  CACHE_TTL: "3600"
+  PROMETHEUS_ENABLED: "true"
+  PROMETHEUS_PORT: "9090"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-service-secret
+  namespace: direito-lux-staging
+type: Opaque
+data:
+  DB_PASSWORD: ZGV2X3Bhc3N3b3JkXzEyMw== # dev_password_123 base64 encoded
+  REDIS_PASSWORD: ZGV2X3JlZGlzXzEyMw== # dev_redis_123 base64 encoded
+  OPENAI_API_KEY: c2stZGV2LWtleS1oZXJl # sk-dev-key-here base64 encoded
+  HUGGINGFACE_TOKEN: ZGV2X2hmX3Rva2VuX2hlcmU= # dev_hf_token_here base64 encoded
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ai-service-models-pvc
+  namespace: direito-lux-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard-rwo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: direito-lux-staging
+  labels:
+    app: ai-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-service
+  template:
+    metadata:
+      labels:
+        app: ai-service
+        tier: backend
+    spec:
+      containers:
+      - name: ai-service
+        image: ghcr.io/your-org/direito-lux-ai-service:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: PORT
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: ENVIRONMENT
+        - name: DEPLOYMENT_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DEPLOYMENT_MODE
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: LOG_LEVEL
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: REDIS_PASSWORD
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: OPENAI_API_KEY
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: HUGGINGFACE_TOKEN
+        volumeMounts:
+        - name: models-storage
+          mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: ai-service-models-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  namespace: direito-lux-staging
+  labels:
+    app: ai-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: ai-service
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-service-hpa
+  namespace: direito-lux-staging
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+# Production namespace resources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-service-config
+  namespace: direito-lux-production
+data:
+  PORT: "8000"
+  ENVIRONMENT: "production"
+  DEPLOYMENT_MODE: "gcp"
+  LOG_LEVEL: "warn"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "direito_lux_production"
+  DB_USER: "direito_lux"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "2"
+  AUTH_SERVICE_URL: "http://auth-service:8080"
+  TENANT_SERVICE_URL: "http://tenant-service:8080"
+  PROCESS_SERVICE_URL: "http://process-service:8080"
+  OPENAI_MODEL: "gpt-4"
+  OPENAI_EMBEDDINGS_MODEL: "text-embedding-ada-002"
+  OPENAI_MAX_TOKENS: "4000"
+  OPENAI_TEMPERATURE: "0.3"
+  HUGGINGFACE_MODEL_NAME: "sentence-transformers/all-MiniLM-L6-v2"
+  VECTOR_STORE_TYPE: "faiss"
+  EMBEDDING_DIMENSION: "384"
+  MAX_SEARCH_RESULTS: "100"
+  SIMILARITY_THRESHOLD: "0.8"
+  CACHE_TTL: "7200"
+  PROMETHEUS_ENABLED: "true"
+  PROMETHEUS_PORT: "9090"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-service-secret
+  namespace: direito-lux-production
+type: Opaque
+data:
+  DB_PASSWORD: cHJvZF9wYXNzd29yZF8xMjM= # prod_password_123 base64 encoded
+  REDIS_PASSWORD: cHJvZF9yZWRpc18xMjM= # prod_redis_123 base64 encoded
+  OPENAI_API_KEY: c2stcHJvZC1rZXktaGVyZQ== # sk-prod-key-here base64 encoded
+  HUGGINGFACE_TOKEN: cHJvZF9oZl90b2tlbl9oZXJl # prod_hf_token_here base64 encoded
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ai-service-models-pvc
+  namespace: direito-lux-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard-rwo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: direito-lux-production
+  labels:
+    app: ai-service
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ai-service
+  template:
+    metadata:
+      labels:
+        app: ai-service
+        tier: backend
+    spec:
+      containers:
+      - name: ai-service
+        image: ghcr.io/your-org/direito-lux-ai-service:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: PORT
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: ENVIRONMENT
+        - name: DEPLOYMENT_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DEPLOYMENT_MODE
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: LOG_LEVEL
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-service-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: REDIS_PASSWORD
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: OPENAI_API_KEY
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ai-service-secret
+              key: HUGGINGFACE_TOKEN
+        volumeMounts:
+        - name: models-storage
+          mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: ai-service-models-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  namespace: direito-lux-production
+  labels:
+    app: ai-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: ai-service
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-service-hpa
+  namespace: direito-lux-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

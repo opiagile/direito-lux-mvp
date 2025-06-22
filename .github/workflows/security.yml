@@ -1,0 +1,384 @@
+name: 🔐 Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scan every day at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # CodeQL Analysis for Go Services
+  codeql-go:
+    name: 🔍 CodeQL Analysis (Go)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        service: [
+          auth-service,
+          tenant-service, 
+          process-service,
+          notification-service,
+          search-service,
+          report-service,
+          mcp-service,
+          datajud-service
+        ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: go
+          queries: security-extended
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
+      
+      - name: Build service
+        working-directory: services/${{ matrix.service }}
+        run: |
+          if [ -f "go.mod" ]; then
+            go mod download
+            go build ./...
+          fi
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:go/service:${{ matrix.service }}"
+
+  # CodeQL Analysis for Python (AI Service)
+  codeql-python:
+    name: 🔍 CodeQL Analysis (Python)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+          queries: security-extended
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/ai-service/requirements.txt
+      
+      - name: Install dependencies
+        working-directory: services/ai-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:python/service:ai-service"
+
+  # CodeQL Analysis for JavaScript/TypeScript (Frontend)
+  codeql-javascript:
+    name: 🔍 CodeQL Analysis (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          queries: security-extended
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript/service:frontend"
+
+  # Dependency Vulnerability Scan
+  dependency-scan:
+    name: 📦 Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: Go Dependencies
+            path: services/*/go.mod
+            tool: govulncheck
+          - name: Python Dependencies
+            path: services/ai-service/requirements.txt
+            tool: safety
+          - name: Node.js Dependencies
+            path: frontend/package.json
+            tool: npm-audit
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      # Go vulnerability scanning
+      - name: Setup Go and scan Go dependencies
+        if: matrix.tool == 'govulncheck'
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Install govulncheck
+        if: matrix.tool == 'govulncheck'
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      
+      - name: Run govulncheck
+        if: matrix.tool == 'govulncheck'
+        run: |
+          for service_dir in services/*/; do
+            if [ -f "$service_dir/go.mod" ]; then
+              echo "Scanning $service_dir"
+              cd "$service_dir"
+              govulncheck ./...
+              cd ../../
+            fi
+          done
+      
+      # Python vulnerability scanning
+      - name: Setup Python and scan Python dependencies
+        if: matrix.tool == 'safety'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install safety
+        if: matrix.tool == 'safety'
+        run: pip install safety
+      
+      - name: Run safety check
+        if: matrix.tool == 'safety'
+        working-directory: services/ai-service
+        run: safety check -r requirements.txt
+      
+      # Node.js vulnerability scanning
+      - name: Setup Node.js and scan Node.js dependencies
+        if: matrix.tool == 'npm-audit' 
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Run npm audit
+        if: matrix.tool == 'npm-audit'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level moderate
+
+  # Docker Image Security Scan
+  docker-security-scan:
+    name: 🐳 Docker Image Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        service: [
+          auth-service,
+          tenant-service,
+          process-service,
+          ai-service,
+          notification-service,
+          search-service,
+          report-service,
+          mcp-service,
+          datajud-service,
+          frontend
+        ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image for scanning
+        run: |
+          if [ -f "services/${{ matrix.service }}/Dockerfile" ]; then
+            docker build -t ${{ matrix.service }}:latest services/${{ matrix.service }}
+          elif [ -f "services/${{ matrix.service }}/Dockerfile.dev" ]; then
+            docker build -f services/${{ matrix.service }}/Dockerfile.dev -t ${{ matrix.service }}:latest services/${{ matrix.service }}
+          elif [ "${{ matrix.service }}" == "frontend" ]; then
+            # Create a simple Dockerfile for frontend if it doesn't exist
+            cat > frontend/Dockerfile << 'EOF'
+          FROM node:18-alpine
+          WORKDIR /app
+          COPY package*.json ./
+          RUN npm ci --only=production
+          COPY . .
+          RUN npm run build
+          EXPOSE 3000
+          CMD ["npm", "start"]
+          EOF
+            docker build -t frontend:latest frontend
+          fi
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ matrix.service }}:latest'
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: 'trivy-${{ matrix.service }}'
+
+  # SAST (Static Application Security Testing)
+  semgrep-scan:
+    name: 🔎 Semgrep SAST Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/golang
+            p/python
+            p/javascript
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  # Secret Scanning
+  secret-scan:
+    name: 🔑 Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # License Compliance Check
+  license-check:
+    name: 📄 License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+      
+      - name: Check Go service licenses
+        run: |
+          for service_dir in services/*/; do
+            if [ -f "$service_dir/go.mod" ]; then
+              echo "Checking licenses for $service_dir"
+              cd "$service_dir"
+              go-licenses check ./...
+              cd ../../
+            fi
+          done
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install license checker for Node.js
+        run: npm install -g license-checker
+      
+      - name: Check frontend licenses
+        working-directory: frontend
+        run: |
+          npm ci
+          license-checker --summary
+
+  # Security Summary Report
+  security-summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs: [
+      codeql-go,
+      codeql-python, 
+      codeql-javascript,
+      dependency-scan,
+      docker-security-scan,
+      semgrep-scan,
+      secret-scan,
+      license-check
+    ]
+    if: always()
+    steps:
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL (Go) | ${{ needs.codeql-go.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL (Python) | ${{ needs.codeql-python.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL (JavaScript) | ${{ needs.codeql-javascript.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Security | ${{ needs.docker-security-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST (Semgrep) | ${{ needs.semgrep-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
