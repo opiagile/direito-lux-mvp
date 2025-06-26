@@ -57,13 +57,15 @@ services:
       - "15672:15672" # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      - ./infrastructure/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
-      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      # Configurações customizadas comentadas temporariamente
+      # - ./infrastructure/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      # - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - direito-lux-network
 
@@ -117,7 +119,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infrastructure/prometheus/config.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -191,8 +193,12 @@ services:
       - REDIS_PASSWORD=dev_redis_123
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=direito-lux
+      - KEYCLOAK_CLIENT_ID=direito-lux-client
+      - KEYCLOAK_CLIENT_SECRET=dev_keycloak_client_secret_123
+      - KEYCLOAK_ENABLED=false
       - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - JWT_SECRET=dev_jwt_secret_direito_lux_2024_super_secure_key_123
       - LOG_LEVEL=debug
     ports:
       - "8081:8080"
@@ -207,7 +213,6 @@ services:
         condition: service_started
     volumes:
       - ./services/auth-service:/app
-      - /app/vendor
     networks:
       - direito-lux-network
     restart: unless-stopped
@@ -512,9 +517,10 @@ services:
     networks:
       - direito-lux-network
 
-  # Redis Commander - Redis Management
+  # Redis Commander - Redis Management (ARM64 compatible)
   redis-commander:
     image: rediscommander/redis-commander:latest
+    platform: linux/amd64
     container_name: direito-lux-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379:0:dev_redis_123
@@ -531,6 +537,7 @@ services:
   # Mailhog - Email Testing
   mailhog:
     image: mailhog/mailhog:v1.0.1
+    platform: linux/amd64
     container_name: direito-lux-mailhog
     ports:
       - "1025:1025" # SMTP

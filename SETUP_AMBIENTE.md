@@ -43,17 +43,40 @@ git clone https://github.com/direito-lux/direito-lux.git
 cd direito-lux
 ```
 
-### 1.1. Setup Automatizado (Recomendado)
+### 1.1. Setup Automatizado (Recomendado - ATUALIZADO! ✨)
 ```bash
-# Setup completo em 5 minutos
-chmod +x SETUP_MASTER_ONBOARDING.sh
-./SETUP_MASTER_ONBOARDING.sh
+# Setup completo em 5 minutos (Ambiente Limpo)
+chmod +x SETUP_COMPLETE_FIXED.sh
+./SETUP_COMPLETE_FIXED.sh
 
 # Verificar se funcionou
-./VERIFICAR_AMBIENTE_CORRIGIDO.sh
+./scripts/utilities/CHECK_SERVICES_STATUS.sh
 ```
 
-### 1.2. Setup Frontend
+### 1.2. Scripts Essenciais (Ambiente Limpo - Redução de 75%)
+
+Após a **grande limpeza**, mantemos apenas os scripts essenciais:
+
+```bash
+# ⭐ CONFIGURAÇÃO INICIAL
+./SETUP_COMPLETE_FIXED.sh                    # Setup completo do ambiente
+./CLEAN_ENVIRONMENT_TOTAL.sh                 # Limpeza total quando necessário
+
+# 🛠️ DESENVOLVIMENTO DIÁRIO  
+./START_LOCAL_DEV.sh                         # Iniciar ambiente de desenvolvimento
+./scripts/utilities/CHECK_SERVICES_STATUS.sh # Verificar status dos serviços
+./test-local.sh                              # Testar funcionalidades
+./stop-services.sh                           # Parar serviços
+
+# 📦 BUILD E DEPLOY
+./build-all.sh                               # Compilar todos os microserviços
+./start-services.sh                          # Iniciar serviços localmente
+./create-service.sh                          # Criar novo microserviço
+```
+
+📋 **Consulte** [`SCRIPTS_ESSENCIAIS.md`](./SCRIPTS_ESSENCIAIS.md) **para documentação completa dos 17 scripts organizados**
+
+### 1.3. Setup Frontend
 ```bash
 cd frontend
 npm install
@@ -102,25 +125,24 @@ docker-compose ps
 # Todos devem estar "healthy"
 ```
 
-### 3. Executar Migrações
+### 3. Executar Migrações (Automatizado)
 ```bash
-# Criar databases
-./scripts/setup-postgres.sh
+# As migrações são executadas automaticamente pelo SETUP_COMPLETE_FIXED.sh
+# Para execução manual:
+./scripts/utilities/execute_migrations.sh
 
-# Rodar migrações do Auth Service
+# Ou manualmente:
 cd services/auth-service
-migrate -path migrations -database "postgres://direito_lux:dev_password_123@localhost:5432/direito_lux_dev?sslmode=disable" up
+migrate -path migrations -database "postgres://direito_lux:direito_lux_pass_dev@localhost:5432/direito_lux_dev?sslmode=disable" up
 ```
 
-### 4. Popular Dados de Desenvolvimento
+### 4. Popular Dados de Desenvolvimento (Automatizado)
 ```bash
-# Executar script de seed
-./scripts/seed-data.sh
-
-# Isso cria:
-# - Tenants de exemplo
-# - Usuários de teste
-# - Processos mock
+# Os dados são inseridos automaticamente pelo SETUP_COMPLETE_FIXED.sh
+# Dados incluídos: SEED_DATABASE_COMPLETE.sql
+# - 8 tenants (2 por plano)
+# - 32 usuários (4 por tenant)
+# - 90+ processos de exemplo
 ```
 
 ### 5. Iniciar Todos os Serviços

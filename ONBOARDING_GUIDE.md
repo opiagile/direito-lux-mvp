@@ -20,12 +20,12 @@
 
 ## 🎯 Setup Desenvolvimento Local (Recomendado)
 
-### 1. Execute o Setup Master
+### 1. Execute o Setup Completo (ATUALIZADO! ✨)
 
 ```bash
 cd /Users/franc/Opiagile/SAAS/direito-lux
-chmod +x SETUP_MASTER_ONBOARDING.sh
-./SETUP_MASTER_ONBOARDING.sh
+chmod +x SETUP_COMPLETE_FIXED.sh
+./SETUP_COMPLETE_FIXED.sh
 ```
 
 Este script faz **TUDO automaticamente**:
@@ -39,8 +39,9 @@ Este script faz **TUDO automaticamente**:
 ### 2. Verificar se deu certo
 
 ```bash
-chmod +x VERIFICAR_AMBIENTE_CORRIGIDO.sh
-./VERIFICAR_AMBIENTE_CORRIGIDO.sh
+# O setup automaticamente verifica o ambiente
+# Para verificação manual use:
+./scripts/utilities/CHECK_SERVICES_STATUS.sh
 ```
 
 Deve mostrar:
@@ -203,9 +204,8 @@ chmod +x *.sh
 ### Ambiente corrompido
 ```bash
 # Limpar tudo e recomeçar
-docker-compose down -v
-docker system prune -f
-./SETUP_MASTER_ONBOARDING.sh
+./CLEAN_ENVIRONMENT_TOTAL.sh
+./SETUP_COMPLETE_FIXED.sh
 ```
 
 ## 📊 Dados de Teste Inclusos
@@ -242,8 +242,8 @@ Após o setup estar funcionando:
 Se ainda houver problemas:
 
 1. Verificar logs: `docker-compose logs [nome-do-serviço]`
-2. Reexecutar setup: `./SETUP_MASTER_ONBOARDING.sh`
-3. Consultar `DOCUMENTO_TESTE_VALIDACAO.md` para testes detalhados
+2. Reexecutar setup: `./SETUP_COMPLETE_FIXED.sh`
+3. Consultar `SCRIPTS_ESSENCIAIS.md` para documentação dos scripts
 
 ---
 

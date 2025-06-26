@@ -1,92 +1,11 @@
+// Re-export from individual store files for better code splitting
+export { useAuthStore, useAuth, selectUser, selectTenant, selectIsAuthenticated } from './auth'
+export { useUIStore, useUI, selectTheme, selectSidebarOpen } from './ui'
+
+// Import remaining types
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { User, Tenant, Theme, Notification } from '@/types'
-
-// Auth Store
-interface AuthState {
-  user: User | null
-  tenant: Tenant | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  token: string | null
-  setUser: (user: User | null) => void
-  setTenant: (tenant: Tenant | null) => void
-  setToken: (token: string | null) => void
-  setLoading: (loading: boolean) => void
-  login: (user: User, tenant: Tenant, token: string) => void
-  logout: () => void
-}
-
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      tenant: null,
-      isAuthenticated: false,
-      isLoading: true,
-      token: null,
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setTenant: (tenant) => set({ tenant }),
-      setToken: (token) => set({ token }),
-      setLoading: (isLoading) => set({ isLoading }),
-      login: (user, tenant, token) => 
-        set({ user, tenant, token, isAuthenticated: true, isLoading: false }),
-      logout: () => 
-        set({ user: null, tenant: null, token: null, isAuthenticated: false, isLoading: false }),
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({ 
-        user: state.user, 
-        tenant: state.tenant, 
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
-    }
-  )
-)
-
-// UI Store
-interface UIState {
-  theme: Theme
-  sidebarOpen: boolean
-  sidebarCollapsed: boolean
-  breadcrumbs: Array<{ label: string; href?: string }>
-  pageTitle: string
-  setTheme: (theme: Theme) => void
-  setSidebarOpen: (open: boolean) => void
-  setSidebarCollapsed: (collapsed: boolean) => void
-  setBreadcrumbs: (breadcrumbs: Array<{ label: string; href?: string }>) => void
-  setPageTitle: (title: string) => void
-  toggleSidebar: () => void
-  toggleSidebarCollapse: () => void
-}
-
-export const useUIStore = create<UIState>()(
-  persist(
-    (set, get) => ({
-      theme: 'system',
-      sidebarOpen: true,
-      sidebarCollapsed: false,
-      breadcrumbs: [],
-      pageTitle: '',
-      setTheme: (theme) => set({ theme }),
-      setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
-      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
-      setBreadcrumbs: (breadcrumbs) => set({ breadcrumbs }),
-      setPageTitle: (pageTitle) => set({ pageTitle }),
-      toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
-      toggleSidebarCollapse: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
-    }),
-    {
-      name: 'ui-storage',
-      partialize: (state) => ({ 
-        theme: state.theme,
-        sidebarCollapsed: state.sidebarCollapsed,
-      }),
-    }
-  )
-)
+import { Notification } from '@/types'
 
 // Notification Store
 interface NotificationState {
@@ -324,20 +243,7 @@ export const useSettingsStore = create<SettingsState>()(
   )
 )
 
-// Global store combining all stores
-export const useStore = () => ({
-  auth: useAuthStore(),
-  ui: useUIStore(),
-  notifications: useNotificationStore(),
-  dashboard: useDashboardStore(),
-  search: useSearchStore(),
-  process: useProcessStore(),
-  settings: useSettingsStore(),
-})
-
-// Helper hooks
-export const useAuth = () => useAuthStore()
-export const useUI = () => useUIStore()
+// Helper hooks for other stores
 export const useNotifications = () => useNotificationStore()
 export const useDashboard = () => useDashboardStore()
 export const useSearch = () => useSearchStore()
@@ -345,9 +251,4 @@ export const useProcess = () => useProcessStore()
 export const useSettings = () => useSettingsStore()
 
 // Selectors
-export const selectUser = () => useAuthStore(state => state.user)
-export const selectTenant = () => useAuthStore(state => state.tenant)
-export const selectIsAuthenticated = () => useAuthStore(state => state.isAuthenticated)
-export const selectTheme = () => useUIStore(state => state.theme)
-export const selectSidebarOpen = () => useUIStore(state => state.sidebarOpen)
 export const selectUnreadCount = () => useNotificationStore(state => state.unreadCount)

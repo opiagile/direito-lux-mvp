@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
+import { ChunkLoadErrorBoundary } from '@/components/loading-boundary'
 import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -20,15 +21,17 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster 
-            position="top-right" 
-            richColors 
-            closeButton
-            expand
-          />
-        </Providers>
+        <ChunkLoadErrorBoundary>
+          <Providers>
+            {children}
+            <Toaster 
+              position="top-right" 
+              richColors 
+              closeButton
+              expand
+            />
+          </Providers>
+        </ChunkLoadErrorBoundary>
       </body>
     </html>
   )

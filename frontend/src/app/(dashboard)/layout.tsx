@@ -13,20 +13,18 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, token } = useAuthStore()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Check token exists instead of isLoading
+    const hasToken = token || localStorage.getItem('auth_token')
+    if (!hasToken) {
       router.push('/login')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [token, router])
 
-  if (isLoading) {
+  if (!isAuthenticated && !token) {
     return <LoadingScreen />
-  }
-
-  if (!isAuthenticated) {
-    return null
   }
 
   return (

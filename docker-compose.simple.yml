@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # INFRAESTRUTURA BASE
+  # =============================================================================
+  
+  # PostgreSQL - Banco principal
+  postgres:
+    image: postgres:15
+    container_name: direito-lux-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/sql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - direito-lux-network
+
+  # Redis - Cache e sessões
+  redis:
+    image: redis:7-alpine
+    container_name: direito-lux-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass dev_redis_123
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "dev_redis_123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - direito-lux-network
+
+  # RabbitMQ - Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: direito-lux-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: direito_lux
+      RABBITMQ_DEFAULT_PASS: dev_rabbit_123
+      RABBITMQ_DEFAULT_VHOST: direito_lux
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - direito-lux-network
+
+  # pgAdmin - Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: direito-lux-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@direitolux.com
+      PGADMIN_DEFAULT_PASSWORD: dev_pgadmin_123
+      PGADMIN_DISABLE_POSTFIX: "true"
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - direito-lux-network
+    restart: unless-stopped
+
+  # Mailhog - Email Development
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: direito-lux-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - direito-lux-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  direito-lux-network:
+    external: true
+    name: direito-lux-network

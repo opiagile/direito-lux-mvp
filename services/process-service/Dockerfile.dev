@@ -13,28 +13,29 @@ RUN apk add --no-cache \
     curl \
     make
 
-# Instalar Air para live reload
-RUN go install github.com/cosmtrek/air@latest
+# Instalar Air para live reload (versão compatível com Go 1.21)
+RUN go install github.com/cosmtrek/air@v1.49.0
 
-# Instalar outras ferramentas de desenvolvimento
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-RUN go install github.com/swaggo/swag/cmd/swag@latest
-
-# Criar usuário de desenvolvimento
-RUN addgroup -g 1000 appgroup && \
-    adduser -D -s /bin/sh -u 1000 -G appgroup appuser
+# Instalar outras ferramentas de desenvolvimento (versões compatíveis com Go 1.21)
+RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.1
 
 # Definir diretório de trabalho
 WORKDIR /app
 
+# Copiar go mod (se existir)
+COPY go.mod go.sum ./
+
+# Download das dependências (se go.mod existir) - ainda como root
+RUN if [ -f go.mod ]; then go mod download; fi
+
+# Criar usuário de desenvolvimento
+RUN addgroup -g 1000 appgroup && \
+    adduser -D -s /bin/sh -u 1000 -G appgroup appuser && \
+    chown -R appuser:appgroup /app
+
 # Definir usuário
 USER appuser
-
-# Copiar go mod (se existir)
-COPY --chown=appuser:appgroup go.mod go.sum ./
-
-# Download das dependências (se go.mod existir)
-RUN if [ -f go.mod ]; then go mod download; fi
 
 # Expor porta
 EXPOSE 8080

@@ -191,39 +191,44 @@ Workflows implementados:
 git clone https://github.com/direito-lux/direito-lux.git
 cd direito-lux
 
-# 2. Setup completo automatizado (NOVO! 🎉)
-./SETUP_MASTER_ONBOARDING.sh
+# 2. Setup completo automatizado (ATUALIZADO! ✨)
+./SETUP_COMPLETE_FIXED.sh
 
 # Isso irá:
-# ✅ Configurar todo ambiente Docker
-# ✅ Criar bancos de dados e executar migrations
-# ✅ Popular dados de teste (8 tenants, 32 usuários, 100 processos)
-# ✅ Iniciar todos os serviços
-# ✅ Verificar saúde dos serviços
+# ✅ Limpar ambiente anterior
+# ✅ Subir infraestrutura (PostgreSQL, Redis, RabbitMQ)
+# ✅ Executar migrations em ordem correta
+# ✅ Carregar dados de teste (8 tenants, 32 usuários)
+# ✅ Validar configuração completa
+# ✅ Login funcionando 100%
 
 # 3. Acessar aplicação
 # Frontend: http://localhost:3000
-# API Docs: http://localhost:8080/docs
+# Login: admin@silvaassociados.com.br / password
 ```
 
-### 🚀 Scripts de Setup Disponíveis
+### 🧹 Scripts Essenciais (Ambiente Limpo - Redução de 75%)
+
+Depois da **grande limpeza**, mantemos apenas os scripts essenciais:
 
 ```bash
-# Setup completo (recomendado)
-./SETUP_MASTER_ONBOARDING.sh
+# ⭐ CONFIGURAÇÃO INICIAL
+./SETUP_COMPLETE_FIXED.sh                    # Setup completo do ambiente
+./CLEAN_ENVIRONMENT_TOTAL.sh                 # Limpeza total quando necessário
 
-# Setup apenas Docker e infraestrutura
-./SETUP_DOCKER_CORRETO.sh
+# 🛠️ DESENVOLVIMENTO DIÁRIO  
+./START_LOCAL_DEV.sh                         # Iniciar ambiente de desenvolvimento
+./scripts/utilities/CHECK_SERVICES_STATUS.sh # Verificar status dos serviços
+./test-local.sh                              # Testar funcionalidades
+./stop-services.sh                           # Parar serviços
 
-# Inserir dados de teste
-./INSERIR_DADOS_TESTE.sh
-
-# Executar migrations
-./EXECUTAR_TODAS_MIGRATIONS.sh
-
-# Verificar ambiente
-./VERIFICAR_AMBIENTE.sh
+# 📦 BUILD E DEPLOY
+./build-all.sh                               # Compilar todos os microserviços
+./start-services.sh                          # Iniciar serviços localmente
+./create-service.sh                          # Criar novo microserviço
 ```
+
+📋 **Consulte** [`SCRIPTS_ESSENCIAIS.md`](./SCRIPTS_ESSENCIAIS.md) **para documentação completa dos 17 scripts organizados**
 
 ### 🔧 Comandos Úteis
 

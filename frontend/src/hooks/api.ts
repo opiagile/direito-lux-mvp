@@ -56,7 +56,10 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: authAPI.login,
     onSuccess: (data) => {
-      localStorage.setItem('auth_token', data.token)
+      // Store access_token from response
+      if (data.access_token) {
+        localStorage.setItem('auth_token', data.access_token)
+      }
       queryClient.setQueryData(queryKeys.auth, data)
       toast.success('Login realizado com sucesso!')
     },

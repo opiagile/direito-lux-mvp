@@ -29,7 +29,11 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
   - Mailhog para emails de dev
   - Localstack para AWS local
   - WhatsApp mock service
-- ✅ **Scripts de setup** (`scripts/setup-*.sh`)
+- ✅ **Scripts Essenciais (Ambiente Limpo)** - Grande limpeza realizada:
+  - Redução de 75% dos scripts (de ~60 para 17 essenciais)
+  - Organização em `scripts/utilities/` para scripts auxiliares
+  - `SETUP_COMPLETE_FIXED.sh` como script principal de setup
+  - Documentação completa em `SCRIPTS_ESSENCIAIS.md`
 - ✅ **.env.example** com 100+ variáveis configuradas
 
 ### 2.1. Deploy DEV Environment (NOVO)

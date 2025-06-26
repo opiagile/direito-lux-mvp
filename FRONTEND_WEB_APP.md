@@ -267,7 +267,7 @@ http://localhost:3000
 
 ### Variáveis de Ambiente
 ```env
-API_BASE_URL=http://localhost:8090
+API_BASE_URL=http://localhost:8081
 AI_SERVICE_URL=http://localhost:8000
 SEARCH_SERVICE_URL=http://localhost:8086
 REPORT_SERVICE_URL=http://localhost:8087
