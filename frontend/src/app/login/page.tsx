@@ -38,6 +38,25 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
+      // For testing purposes, first try to use mock data
+      const { getMockUserByEmail } = await import('@/lib/mock-users')
+      const mockData = getMockUserByEmail(data.email)
+      
+      if (mockData && data.password === 'password') {
+        // Use mock data for testing
+        console.log('Using mock user data for testing:', mockData.user.role)
+        
+        const mockToken = `mock-token-${Date.now()}`
+        localStorage.setItem('auth_token', mockToken)
+        
+        loginStore(mockData.user, mockData.tenant, mockToken)
+        console.log('Mock auth successful, redirecting to dashboard...')
+        toast.success(`Login realizado como ${mockData.user.role}`)
+        router.push('/dashboard')
+        return
+      }
+      
+      // Fallback to actual API call
       const result = await login.mutateAsync(data)
       console.log('Login response:', result)
       

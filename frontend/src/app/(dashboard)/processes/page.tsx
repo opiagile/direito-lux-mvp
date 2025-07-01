@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { 
   Search, 
   Filter, 
@@ -33,69 +33,51 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useProcesses } from '@/hooks/api'
-import { useProcessStore } from '@/store'
+import { useProcessDataStore, useProcessUIStore } from '@/store'
+import { usePermissions } from '@/hooks/usePermissions'
+import { ProcessModal } from '@/components/processes/ProcessModal'
 import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils'
-
-const mockProcesses = [
-  {
-    id: '1',
-    number: '5001234-20.2023.4.03.6109',
-    subject: 'Ação de Cobrança',
-    court: 'TJSP - 1ª Vara Cível',
-    status: 'active',
-    priority: 'high',
-    monitoring: true,
-    lastMovement: '2025-01-18T10:30:00Z',
-    parties: ['João Silva', 'Maria Santos'],
-    lawyer: 'Dr. Carlos Oliveira',
-    estimatedValue: 50000,
-  },
-  {
-    id: '2',
-    number: '5009876-15.2023.4.03.6109',
-    subject: 'Ação Trabalhista',
-    court: 'TRT - 2ª Região',
-    status: 'active',
-    priority: 'medium',
-    monitoring: false,
-    lastMovement: '2025-01-17T14:15:00Z',
-    parties: ['Pedro Costa', 'Empresa ABC Ltda'],
-    lawyer: 'Dra. Ana Paula',
-    estimatedValue: 25000,
-  },
-  {
-    id: '3',
-    number: '5005555-30.2023.4.03.6109',
-    subject: 'Divórcio Consensual',
-    court: 'TJSP - Vara de Família',
-    status: 'concluded',
-    priority: 'low',
-    monitoring: true,
-    lastMovement: '2025-01-15T09:00:00Z',
-    parties: ['Roberto Lima', 'Sandra Lima'],
-    lawyer: 'Dr. Carlos Oliveira',
-    estimatedValue: 0,
-  },
-]
 
 export default function ProcessesPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const { viewMode, setViewMode } = useProcessStore()
-  const { data: processes, isLoading } = useProcesses()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingProcessId, setEditingProcessId] = useState<string | undefined>()
+  
+  const { viewMode, setViewMode } = useProcessUIStore()
+  const { 
+    processes,
+    getProcessesByFilter, 
+    deleteProcess, 
+    toggleMonitoring, 
+    getStats 
+  } = useProcessDataStore()
+  const { canPerformAction } = usePermissions()
 
-  const filteredProcesses = mockProcesses.filter(process => 
-    process.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    process.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    process.court.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredProcesses = useMemo(() => {
+    return getProcessesByFilter({
+      search: searchQuery
+    })
+  }, [getProcessesByFilter, searchQuery, processes]) // Add processes to dependency array
+
+  const stats = getStats()
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'destructive'
+      case 'urgent': return 'destructive'
       case 'medium': return 'default'
       case 'low': return 'secondary'
       default: return 'outline'
+    }
+  }
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'Alta'
+      case 'urgent': return 'Urgente'
+      case 'medium': return 'Média'
+      case 'low': return 'Baixa'
+      default: return priority
     }
   }
 
@@ -134,10 +116,10 @@ export default function ProcessesPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={getPriorityColor(process.priority)}>
-                    {process.priority}
+                    {getPriorityLabel(process.priority)}
                   </Badge>
                 </TableCell>
-                <TableCell>{formatDate(process.lastMovement)}</TableCell>
+                <TableCell>{process.lastMovement ? formatDate(process.lastMovement) : 'N/A'}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -150,27 +132,43 @@ export default function ProcessesPage() {
                         <Eye className="w-4 h-4 mr-2" />
                         Visualizar
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        {process.monitoring ? (
-                          <>
-                            <BellOff className="w-4 h-4 mr-2" />
-                            Parar Monitoramento
-                          </>
-                        ) : (
-                          <>
-                            <Bell className="w-4 h-4 mr-2" />
-                            Monitorar
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash className="w-4 h-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
+                      {canPerformAction('processes', 'edit') && (
+                        <DropdownMenuItem onClick={() => {
+                          setEditingProcessId(process.id)
+                          setIsModalOpen(true)
+                        }}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                      {canPerformAction('processes', 'edit') && (
+                        <DropdownMenuItem onClick={() => toggleMonitoring(process.id)}>
+                          {process.monitoring ? (
+                            <>
+                              <BellOff className="w-4 h-4 mr-2" />
+                              Parar Monitoramento
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="w-4 h-4 mr-2" />
+                              Monitorar
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      )}
+                      {canPerformAction('processes', 'delete') && (
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => {
+                            if (confirm(`Tem certeza que deseja excluir o processo ${process.number}?`)) {
+                              deleteProcess(process.id)
+                            }
+                          }}
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -180,6 +178,90 @@ export default function ProcessesPage() {
         </Table>
       </CardContent>
     </Card>
+  )
+
+  const renderListView = () => (
+    <div className="space-y-3">
+      {filteredProcesses.map((process) => (
+        <Card key={process.id} className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-2">
+                  <h3 className="font-semibold text-lg">{process.number}</h3>
+                  {process.monitoring && (
+                    <Bell className="w-4 h-4 text-blue-500" />
+                  )}
+                </div>
+                <p className="text-muted-foreground mb-2">{process.subject}</p>
+                <div className="flex items-center space-x-4 text-sm">
+                  <span className="text-muted-foreground">Tribunal: {process.court}</span>
+                  <Badge variant={getStatusColor(process.status)}>
+                    {getStatusLabel(process.status)}
+                  </Badge>
+                  <Badge variant={getPriorityColor(process.priority)}>
+                    {getPriorityLabel(process.priority)}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Última mov.: {process.lastMovement ? formatDate(process.lastMovement) : 'N/A'}
+                  </span>
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Visualizar
+                  </DropdownMenuItem>
+                  {canPerformAction('processes', 'edit') && (
+                    <DropdownMenuItem onClick={() => {
+                      setEditingProcessId(process.id)
+                      setIsModalOpen(true)
+                    }}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                  )}
+                  {canPerformAction('processes', 'edit') && (
+                    <DropdownMenuItem onClick={() => toggleMonitoring(process.id)}>
+                      {process.monitoring ? (
+                        <>
+                          <BellOff className="w-4 h-4 mr-2" />
+                          Parar Monitoramento
+                        </>
+                      ) : (
+                        <>
+                          <Bell className="w-4 h-4 mr-2" />
+                          Monitorar
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  )}
+                  {canPerformAction('processes', 'delete') && (
+                    <DropdownMenuItem 
+                      className="text-red-600"
+                      onClick={() => {
+                        if (confirm(`Tem certeza que deseja excluir o processo ${process.number}?`)) {
+                          deleteProcess(process.id)
+                        }
+                      }}
+                    >
+                      <Trash className="w-4 h-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 
   const renderGridView = () => (
@@ -205,19 +287,19 @@ export default function ProcessesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Status:</span>
-                <Badge variant={getStatusColor(process.status)} size="sm">
+                <Badge variant={getStatusColor(process.status)}>
                   {getStatusLabel(process.status)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Prioridade:</span>
-                <Badge variant={getPriorityColor(process.priority)} size="sm">
-                  {process.priority}
+                <Badge variant={getPriorityColor(process.priority)}>
+                  {getPriorityLabel(process.priority)}
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground">
                 <p>Tribunal: {process.court}</p>
-                <p>Última mov.: {formatDate(process.lastMovement)}</p>
+                <p>Última mov.: {process.lastMovement ? formatDate(process.lastMovement) : 'N/A'}</p>
               </div>
               <div className="flex justify-end pt-2">
                 <DropdownMenu>
@@ -231,23 +313,43 @@ export default function ProcessesPage() {
                       <Eye className="w-4 h-4 mr-2" />
                       Visualizar
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      {process.monitoring ? (
-                        <>
-                          <BellOff className="w-4 h-4 mr-2" />
-                          Parar Monitoramento
-                        </>
-                      ) : (
-                        <>
-                          <Bell className="w-4 h-4 mr-2" />
-                          Monitorar
-                        </>
-                      )}
-                    </DropdownMenuItem>
+                    {canPerformAction('processes', 'edit') && (
+                      <DropdownMenuItem onClick={() => {
+                        setEditingProcessId(process.id)
+                        setIsModalOpen(true)
+                      }}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                    )}
+                    {canPerformAction('processes', 'edit') && (
+                      <DropdownMenuItem onClick={() => toggleMonitoring(process.id)}>
+                        {process.monitoring ? (
+                          <>
+                            <BellOff className="w-4 h-4 mr-2" />
+                            Parar Monitoramento
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="w-4 h-4 mr-2" />
+                            Monitorar
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
+                    {canPerformAction('processes', 'delete') && (
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => {
+                          if (confirm(`Tem certeza que deseja excluir o processo ${process.number}?`)) {
+                            deleteProcess(process.id)
+                          }
+                        }}
+                      >
+                        <Trash className="w-4 h-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -269,10 +371,12 @@ export default function ProcessesPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Processo
-          </Button>
+          {canPerformAction('processes', 'create') && (
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Processo
+            </Button>
+          )}
         </div>
       </div>
 
@@ -320,14 +424,16 @@ export default function ProcessesPage() {
       </div>
 
       {/* Content */}
-      {viewMode === 'table' ? renderTableView() : renderGridView()}
+      {viewMode === 'table' && renderTableView()}
+      {viewMode === 'grid' && renderGridView()}
+      {viewMode === 'list' && renderListView()}
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredProcesses.length}
+              {stats.total}
             </div>
             <p className="text-xs text-muted-foreground">
               Total de processos
@@ -337,7 +443,7 @@ export default function ProcessesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredProcesses.filter(p => p.status === 'active').length}
+              {stats.active}
             </div>
             <p className="text-xs text-muted-foreground">
               Processos ativos
@@ -347,7 +453,7 @@ export default function ProcessesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredProcesses.filter(p => p.monitoring).length}
+              {stats.monitoring}
             </div>
             <p className="text-xs text-muted-foreground">
               Monitorados
@@ -357,7 +463,7 @@ export default function ProcessesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredProcesses.filter(p => p.priority === 'high').length}
+              {stats.highPriority}
             </div>
             <p className="text-xs text-muted-foreground">
               Alta prioridade
@@ -365,6 +471,18 @@ export default function ProcessesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Process Modal */}
+      <ProcessModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingProcessId(undefined)
+          // Force re-render by updating a dummy state
+          setSearchQuery(searchQuery)
+        }}
+        processId={editingProcessId}
+      />
     </div>
   )
 }

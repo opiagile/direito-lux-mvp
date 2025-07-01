@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useProcessStats } from '@/hooks/api'
+import { usePermissions } from '@/hooks/usePermissions'
 import { formatNumber, formatPercentage } from '@/lib/utils'
 
 const mockKPIData = [
@@ -76,6 +77,7 @@ const recentActivities = [
 
 export default function DashboardPage() {
   const { data: processStats, isLoading } = useProcessStats()
+  const { canPerformAction } = usePermissions()
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -113,10 +115,12 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Processo
-          </Button>
+          {canPerformAction('processes', 'create') && (
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Processo
+            </Button>
+          )}
         </div>
       </div>
 

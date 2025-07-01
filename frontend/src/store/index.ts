@@ -1,6 +1,8 @@
 // Re-export from individual store files for better code splitting
 export { useAuthStore, useAuth, selectUser, selectTenant, selectIsAuthenticated } from './auth'
 export { useUIStore, useUI, selectTheme, selectSidebarOpen } from './ui'
+export { useProcessStore as useProcessDataStore } from './processes'
+export { useBillingStore } from './billing'
 
 // Import remaining types
 import { create } from 'zustand'
@@ -158,7 +160,7 @@ interface ProcessState {
   setSortOrder: (order: 'asc' | 'desc') => void
 }
 
-export const useProcessStore = create<ProcessState>()(
+export const useProcessUIStore = create<ProcessState>()(
   persist(
     (set, get) => ({
       selectedProcesses: [],
@@ -247,7 +249,7 @@ export const useSettingsStore = create<SettingsState>()(
 export const useNotifications = () => useNotificationStore()
 export const useDashboard = () => useDashboardStore()
 export const useSearch = () => useSearchStore()
-export const useProcess = () => useProcessStore()
+export const useProcess = () => useProcessUIStore()
 export const useSettings = () => useSettingsStore()
 
 // Selectors

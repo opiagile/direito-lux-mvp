@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Search, Moon, Sun, User, LogOut, Settings } from 'lucide-react'
+import { Bell, Search, Moon, Sun, User, LogOut, Settings, Building2 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +21,7 @@ import { useRouter } from 'next/navigation'
 export function Header() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
-  const { user, logout } = useAuthStore()
+  const { user, tenant, logout } = useAuthStore()
   const { unreadCount } = useNotificationStore()
 
   const handleLogout = () => {
@@ -42,6 +42,30 @@ export function Header() {
             />
           </div>
         </div>
+
+        {/* Tenant Info */}
+        {tenant && (
+          <>
+            {/* Desktop version */}
+            <div className="hidden md:flex items-center space-x-2 px-4 py-2 bg-muted/30 rounded-lg">
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{tenant.name}</span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  Plano {tenant.plan}
+                </span>
+              </div>
+            </div>
+            
+            {/* Mobile version */}
+            <div className="md:hidden flex items-center space-x-1 px-2 py-1 bg-muted/30 rounded">
+              <Building2 className="w-3 h-3 text-muted-foreground" />
+              <span className="text-xs font-medium truncate max-w-[100px]">
+                {tenant.name}
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Right Section */}
         <div className="flex items-center space-x-4">
