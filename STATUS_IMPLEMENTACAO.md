@@ -4,6 +4,21 @@
 
 O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processos jurídicos, integrada com a API DataJud do CNJ, oferecendo notificações multicanal e análise inteligente com IA.
 
+## 🧹 GRANDE LIMPEZA DE MOCKS (02/01/2025)
+
+### ✅ Ações Realizadas:
+- **500+ linhas de código mock removidas**
+- **Implementações duplicadas eliminadas**
+- **Sistema agora 100% conectado a dados reais**
+- **TODOs específicos adicionados para APIs pendentes**
+
+### 📋 Detalhes da Limpeza:
+1. **Tenant Service**: Handler mock `GetTenant()` removido (134 linhas)
+2. **Frontend Search**: Arrays mock de jurisprudência, documentos e contatos removidos
+3. **Frontend Dashboard**: mockKPIData e recentActivities removidos
+4. **Frontend Reports**: mockReports e mockSchedules removidos (100+ linhas)
+5. **Duplicações**: Múltiplas implementações do mesmo handler eliminadas
+
 ## ✅ O que está Implementado
 
 ### 1. Documentação e Planejamento

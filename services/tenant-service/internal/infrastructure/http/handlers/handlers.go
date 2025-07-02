@@ -26,7 +26,7 @@ func HealthCheck(cfg *config.Config) gin.HandlerFunc {
 			Service:   cfg.ServiceName,
 			Version:   cfg.Version,
 		}
-		
+
 		c.JSON(http.StatusOK, response)
 	}
 }
@@ -41,7 +41,7 @@ func ReadinessCheck(cfg *config.Config) gin.HandlerFunc {
 			Service:   cfg.ServiceName,
 			Version:   cfg.Version,
 		}
-		
+
 		c.JSON(http.StatusOK, response)
 	}
 }
@@ -50,7 +50,7 @@ func ReadinessCheck(cfg *config.Config) gin.HandlerFunc {
 func Ping() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
+			"message":   "pong",
 			"timestamp": time.Now().UTC(),
 		})
 	}
@@ -67,44 +67,9 @@ func CreateTenant() gin.HandlerFunc {
 	}
 }
 
-// GetTenant busca tenant por ID
-func GetTenant() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.Param("id")
-		
-		// Mock data compatível com o frontend
-		tenant := gin.H{
-			"id": id,
-			"name": "Costa Santos Advogados",
-			"cnpj": "12.345.678/0001-99",
-			"email": "contato@costasantos.com.br",
-			"plan": "professional",
-			"isActive": true,
-			"createdAt": "2024-01-01T00:00:00Z",
-			"updatedAt": "2024-01-01T00:00:00Z",
-			"subscription": gin.H{
-				"id": id + "-sub",
-				"tenantId": id,
-				"plan": "professional",
-				"status": "active",
-				"startDate": "2024-01-01T00:00:00Z",
-				"trial": false,
-				"quotas": gin.H{
-					"processes": 200,
-					"users": 5,
-					"mcpCommands": 1000,
-					"aiSummaries": 100,
-					"reports": 50,
-					"dashboards": 10,
-					"widgetsPerDashboard": 8,
-					"schedules": 20,
-				},
-			},
-		}
-		
-		c.JSON(http.StatusOK, gin.H{"data": tenant})
-	}
-}
+// ❌ HANDLER MOCK REMOVIDO - USAR IMPLEMENTAÇÃO REAL NO server.go
+// Este handler estava duplicado e 100% hardcoded
+// A implementação real está em server.go conectada ao banco PostgreSQL
 
 // GetTenantByDocument busca tenant por documento
 func GetTenantByDocument() gin.HandlerFunc {
@@ -114,13 +79,13 @@ func GetTenantByDocument() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Document parameter is required"})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"data": gin.H{
-				"id": "13333333-3333-3333-3333-333333333333",
-				"name": "Costa Santos Advogados",
+				"id":       "13333333-3333-3333-3333-333333333333",
+				"name":     "Costa Santos Advogados 2",
 				"document": document,
-				"plan": "professional",
+				"plan":     "professional",
 			},
 		})
 	}
@@ -131,7 +96,7 @@ func UpdateTenant() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		c.JSON(http.StatusOK, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "Tenant atualizado",
 		})
 	}
@@ -142,7 +107,7 @@ func ActivateTenant() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		c.JSON(http.StatusOK, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "Tenant ativado",
 		})
 	}
@@ -153,7 +118,7 @@ func SuspendTenant() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		c.JSON(http.StatusOK, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "Tenant suspenso",
 		})
 	}
@@ -164,7 +129,7 @@ func CancelTenant() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		c.JSON(http.StatusOK, gin.H{
-			"id": id,
+			"id":      id,
 			"message": "Tenant cancelado",
 		})
 	}

@@ -238,7 +238,7 @@ export default function LoginPage() {
         </Card>
 
         <div className="mt-8 text-center text-xs text-gray-500">
-          © 2025 Direito Lux. Todos os direitos reservados.
+          © 2025 Opiagile. Todos os direitos reservados.
         </div>
       </div>
     </div>

@@ -17,63 +17,11 @@ import { useProcessStats } from '@/hooks/api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { formatNumber, formatPercentage } from '@/lib/utils'
 
-const mockKPIData = [
-  {
-    title: 'Total de Processos',
-    value: 1247,
-    change: 12.5,
-    icon: FileText,
-    trend: 'up' as const,
-  },
-  {
-    title: 'Processos Ativos',
-    value: 892,
-    change: 8.2,
-    icon: Activity,
-    trend: 'up' as const,
-  },
-  {
-    title: 'Movimentações Hoje',
-    value: 23,
-    change: -4.1,
-    icon: TrendingUp,
-    trend: 'down' as const,
-  },
-  {
-    title: 'Prazos Próximos',
-    value: 8,
-    change: 0,
-    icon: AlertTriangle,
-    trend: 'stable' as const,
-  },
-]
+// ❌ MOCK REMOVIDO - Usar dados reais do useProcessStats hook
+// KPIs devem vir de: GET /api/v1/reports/dashboard
 
-const recentActivities = [
-  {
-    id: 1,
-    process: '5001234-20.2023.4.03.6109',
-    action: 'Nova movimentação',
-    description: 'Sentença publicada',
-    time: '2 horas atrás',
-    priority: 'high' as const,
-  },
-  {
-    id: 2,
-    process: '5009876-15.2023.4.03.6109',
-    action: 'Prazo vencendo',
-    description: 'Contestação em 2 dias',
-    time: '4 horas atrás',
-    priority: 'medium' as const,
-  },
-  {
-    id: 3,
-    process: '5005555-30.2023.4.03.6109',
-    action: 'Documento anexado',
-    description: 'Petição inicial',
-    time: '6 horas atrás',
-    priority: 'low' as const,
-  },
-]
+// ❌ MOCK REMOVIDO - Usar dados reais das atividades recentes
+// Atividades devem vir de: GET /api/v1/reports/recent-activities
 
 export default function DashboardPage() {
   const { data: processStats, isLoading } = useProcessStats()
@@ -124,29 +72,63 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - USANDO DADOS REAIS */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {mockKPIData.map((kpi) => (
-          <Card key={kpi.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatNumber(kpi.value)}
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                <span className={getTrendColor(kpi.trend)}>
-                  {getTrendIcon(kpi.trend)} {Math.abs(kpi.change)}%
-                </span>
-                <span>em relação ao mês anterior</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {processStats && (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Processos</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNumber(processStats.total || 0)}</div>
+                <div className="text-xs text-muted-foreground">
+                  <span>Dados atualizados do sistema</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Processos Ativos</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNumber(processStats.active || 0)}</div>
+                <div className="text-xs text-muted-foreground">
+                  <span>Em andamento no momento</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Movimentações Hoje</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNumber(processStats.todayMovements || 0)}</div>
+                <div className="text-xs text-muted-foreground">
+                  <span>Novidades de hoje</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Prazos Próximos</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNumber(processStats.upcomingDeadlines || 0)}</div>
+                <div className="text-xs text-muted-foreground">
+                  <span>Requerem atenção</span>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -163,29 +145,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start space-x-3 p-3 rounded-lg border"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">
-                        {activity.process}
-                      </p>
-                      <Badge variant={getPriorityColor(activity.priority)}>
-                        {activity.action}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="w-8 h-8 mx-auto mb-2" />
+                <p>❌ Mock removido - Implementar busca real de atividades</p>
+                <p className="text-xs mt-1">TODO: Conectar a GET /api/v1/reports/recent-activities</p>
+              </div>
             </div>
             <Button variant="outline" className="w-full mt-4">
               Ver todas as atividades

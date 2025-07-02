@@ -45,108 +45,9 @@ import { useAuthStore } from '@/store'
 import { formatDate } from '@/lib/utils'
 import { Report, ReportType, ReportStatus, ReportSchedule } from '@/types'
 
-const mockReports: Report[] = [
-  {
-    id: '1',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    type: 'executive_summary',
-    title: 'Relatório Executivo - Janeiro 2025',
-    format: 'pdf',
-    status: 'completed',
-    filters: { period: '2025-01' },
-    fileUrl: '/reports/exec_jan_2025.pdf',
-    fileSize: 2048576,
-    processingTime: 5.2,
-    scheduledBy: 'admin@silvaassociados.com.br',
-    createdAt: '2025-01-20T10:30:00Z',
-    completedAt: '2025-01-20T10:35:00Z',
-    expiresAt: '2025-02-20T10:35:00Z'
-  },
-  {
-    id: '2',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    type: 'process_analysis',
-    title: 'Análise de Processos - Dezembro 2024',
-    format: 'excel',
-    status: 'completed',
-    filters: { period: '2024-12', court: 'TJSP' },
-    fileUrl: '/reports/proc_analysis_dec_2024.xlsx',
-    fileSize: 1536000,
-    processingTime: 8.7,
-    scheduledBy: 'gerente@silvaassociados.com.br',
-    createdAt: '2025-01-18T14:15:00Z',
-    completedAt: '2025-01-18T14:24:00Z',
-    expiresAt: '2025-02-18T14:24:00Z'
-  },
-  {
-    id: '3',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    type: 'productivity',
-    title: 'Relatório de Produtividade - Q4 2024',
-    format: 'pdf',
-    status: 'processing',
-    filters: { period: 'Q4-2024' },
-    scheduledBy: 'admin@silvaassociados.com.br',
-    createdAt: '2025-01-20T16:00:00Z'
-  },
-  {
-    id: '4',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    type: 'financial',
-    title: 'Relatório Financeiro - 2024',
-    format: 'excel',
-    status: 'failed',
-    filters: { year: '2024' },
-    scheduledBy: 'admin@silvaassociados.com.br',
-    createdAt: '2025-01-19T09:00:00Z'
-  }
-]
-
-const mockSchedules: ReportSchedule[] = [
-  {
-    id: '1',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    reportType: 'executive_summary',
-    title: 'Relatório Executivo Mensal',
-    format: 'pdf',
-    frequency: 'monthly',
-    filters: { automated: true },
-    recipients: ['admin@silvaassociados.com.br', 'gerente@silvaassociados.com.br'],
-    isActive: true,
-    lastRunAt: '2025-01-20T10:30:00Z',
-    nextRunAt: '2025-02-20T10:30:00Z',
-    createdAt: '2024-12-01T10:00:00Z'
-  },
-  {
-    id: '2',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    reportType: 'productivity',
-    title: 'Relatório de Produtividade Semanal',
-    format: 'excel',
-    frequency: 'weekly',
-    filters: { includeGraphs: true },
-    recipients: ['gerente@silvaassociados.com.br'],
-    isActive: true,
-    lastRunAt: '2025-01-17T08:00:00Z',
-    nextRunAt: '2025-01-24T08:00:00Z',
-    createdAt: '2024-11-15T14:00:00Z'
-  },
-  {
-    id: '3',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    reportType: 'process_analysis',
-    title: 'Análise Trimestral de Processos',
-    format: 'pdf',
-    frequency: 'custom',
-    cronExpression: '0 0 1 */3 *',
-    filters: { detailed: true },
-    recipients: ['admin@silvaassociados.com.br'],
-    isActive: false,
-    lastRunAt: '2024-10-01T00:00:00Z',
-    nextRunAt: '2025-01-01T00:00:00Z',
-    createdAt: '2024-09-01T10:00:00Z'
-  }
-]
+// ❌ MOCKS GIGANTES REMOVIDOS - Usar APIs reais
+// Reports: GET /api/v1/reports
+// Schedules: GET /api/v1/reports/schedules
 
 export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -169,10 +70,10 @@ export default function ReportsPage() {
     )
   }
 
-  const filteredReports = mockReports.filter(report => 
-    report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    report.type.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // ❌ MOCK REMOVIDO - TODO: Implementar busca real de reports
+  const filteredReports: Report[] = []
+  // TODO: const { data: reports } = useReports()
+  // TODO: const filteredReports = reports?.filter(report => ...)
 
   const getStatusColor = (status: ReportStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -393,10 +294,10 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="text-2xl font-bold">
-                  {mockSchedules.filter(s => s.isActive).length}
+                  0
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Agendamentos ativos
+                  ❌ Mock removido - Conectar API real
                 </p>
               </CardContent>
             </Card>
@@ -428,7 +329,14 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockSchedules.map((schedule) => (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <Calendar className="w-8 h-8 mx-auto mb-2" />
+                        <p>❌ Mock removido - Implementar busca real de agendamentos</p>
+                        <p className="text-xs mt-1">TODO: Conectar a GET /api/v1/reports/schedules</p>
+                      </TableCell>
+                    </TableRow>
+                    {/* {schedules.map((schedule) => (
                       <TableRow key={schedule.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center space-x-3">
@@ -499,7 +407,7 @@ export default function ReportsPage() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ))} */
                   </TableBody>
                 </Table>
               </CardContent>
