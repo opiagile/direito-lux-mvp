@@ -3,6 +3,8 @@ export { useAuthStore, useAuth, selectUser, selectTenant, selectIsAuthenticated 
 export { useUIStore, useUI, selectTheme, selectSidebarOpen } from './ui'
 export { useProcessStore as useProcessDataStore } from './processes'
 export { useBillingStore } from './billing'
+export { useUsageStore } from './usage'
+export { useUserStore } from './users'
 
 // Import remaining types
 import { create } from 'zustand'

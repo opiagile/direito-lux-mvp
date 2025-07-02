@@ -106,7 +106,7 @@ echo "🗄️ PostgreSQL:       localhost:5432"
 echo "🚀 Redis:            localhost:6379"
 echo "🐰 RabbitMQ:         http://localhost:15672"
 echo "🔍 Prometheus:       http://localhost:9090"
-echo "📊 Grafana:          http://localhost:3000"
+echo "📊 Grafana:          http://localhost:3002"
 
 echo ""
 echo "🎯 Teste Funcional Básico..."

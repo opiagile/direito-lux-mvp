@@ -43,11 +43,17 @@ git clone https://github.com/direito-lux/direito-lux.git
 cd direito-lux
 ```
 
-### 1.1. Setup Automatizado (Recomendado - ATUALIZADO! ✨)
+### 1.1. Setup Automatizado (Recomendado - 100% FUNCIONAL! ✨)
 ```bash
-# Setup completo em 5 minutos (Ambiente Limpo)
-chmod +x SETUP_COMPLETE_FIXED.sh
-./SETUP_COMPLETE_FIXED.sh
+# Setup definitivo com auth service 100% funcional
+chmod +x SETUP_DATABASE_DEFINITIVO.sh
+./SETUP_DATABASE_DEFINITIVO.sh
+
+# ✅ Isso irá:
+# - Configurar database com schema corrigido
+# - Criar 32 usuários de teste funcionais
+# - Inicializar auth service na porta 8081
+# - Validar login JWT funcionando
 
 # Verificar se funcionou
 ./scripts/utilities/CHECK_SERVICES_STATUS.sh
@@ -59,7 +65,7 @@ Após a **grande limpeza**, mantemos apenas os scripts essenciais:
 
 ```bash
 # ⭐ CONFIGURAÇÃO INICIAL
-./SETUP_COMPLETE_FIXED.sh                    # Setup completo do ambiente
+./SETUP_DATABASE_DEFINITIVO.sh               # Setup definitivo com auth 100% funcional
 ./CLEAN_ENVIRONMENT_TOTAL.sh                 # Limpeza total quando necessário
 
 # 🛠️ DESENVOLVIMENTO DIÁRIO  
@@ -81,7 +87,8 @@ Após a **grande limpeza**, mantemos apenas os scripts essenciais:
 cd frontend
 npm install
 npm run dev
-# Acessar: http://localhost:3000
+# Frontend: http://localhost:3000
+# Grafana: http://localhost:3002
 ```
 
 ### 2. Configurar Variáveis de Ambiente
@@ -221,7 +228,7 @@ make dev
 ### Observabilidade
 - **Jaeger UI**: http://localhost:16686
 - **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000
+- **Grafana**: http://localhost:3002 (admin / dev_grafana_123)
   - User: `admin`
   - Password: `admin123`
 - **Kibana**: http://localhost:5601

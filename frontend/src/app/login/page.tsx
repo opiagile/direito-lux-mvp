@@ -38,81 +38,114 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      // For testing purposes, first try to use mock data
-      const { getMockUserByEmail } = await import('@/lib/mock-users')
-      const mockData = getMockUserByEmail(data.email)
+      console.log('🔐 Autenticando com banco real:', data.email)
       
-      if (mockData && data.password === 'password') {
-        // Use mock data for testing
-        console.log('Using mock user data for testing:', mockData.user.role)
-        
-        const mockToken = `mock-token-${Date.now()}`
-        localStorage.setItem('auth_token', mockToken)
-        
-        loginStore(mockData.user, mockData.tenant, mockToken)
-        console.log('Mock auth successful, redirecting to dashboard...')
-        toast.success(`Login realizado como ${mockData.user.role}`)
-        router.push('/dashboard')
-        return
-      }
-      
-      // Fallback to actual API call
+      // Make direct API call to auth service - NO MOCKS
       const result = await login.mutateAsync(data)
-      console.log('Login response:', result)
+      console.log('✅ Resposta do auth-service:', result)
       
-      // Check if we have the expected format
+      // Validate response structure from real API
       if (!result.user || !result.access_token) {
-        console.error('Invalid login response format:', result)
-        toast.error('Formato de resposta inválido')
+        console.error('❌ Resposta inválida do auth-service:', result)
+        toast.error('Erro na resposta do servidor de autenticação')
         return
       }
       
-      // Extract data from response
       const { user, access_token } = result
+      console.log('👤 Usuário autenticado:', user.email, user.role)
+      console.log('🔍 Estrutura completa do user:', JSON.stringify(user, null, 2))
+      console.log('🔍 Tenant ID do usuário:', user.tenant_id || user.tenantId || user.tenant_id)
       
-      // Store token first so we can make authenticated requests
+      // Store token for authenticated requests
       localStorage.setItem('auth_token', access_token)
       
-      // Initialize fallback tenant data
-      let tenant: Tenant = {
-        id: user.tenant_id,
-        name: 'Silva & Associados',
-        cnpj: '12.345.678/0001-90',
-        email: 'admin@silvaassociados.com.br',
-        plan: 'starter' as const,
-        subscription: {
-          id: `sub-${user.tenant_id}`,
-          tenantId: user.tenant_id,
-          plan: 'starter' as const,
-          status: 'active' as const,
-          startDate: new Date().toISOString(),
-          trial: false,
-          quotas: {
-            processes: 50,
-            users: 2,
-            mcpCommands: 0,
-            aiSummaries: 10,
-            reports: 10,
-            dashboards: 1,
-            widgetsPerDashboard: 5,
-            schedules: 2
-          }
-        },
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      // Extract tenant ID from user response
+      const tenantId = user.tenant_id
+      if (!tenantId) {
+        console.error('❌ Tenant ID não encontrado na resposta do usuário')
+        console.error('🔍 Dados do usuário recebidos:', user)
+        toast.error('❌ Dados incompletos do usuário. Contate o administrador.')
+        return
       }
-
-      // For now, use fallback data since tenant-service has build issues
-      // TODO: Re-enable when tenant-service is fixed
-      console.log('Using fallback tenant data for now')
       
+      console.log('✅ Tenant ID extraído:', tenantId)
+      
+      // Fetch tenant data from tenant-service - REQUIRED ONLINE
+      let tenant: Tenant
+      try {
+        console.log('🏢 Buscando dados do tenant:', tenantId)
+        const tenantResponse = await fetch(`http://localhost:8082/api/v1/tenants/${tenantId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'X-Tenant-ID': tenantId,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(10000)  // 10 second timeout
+        })
+        
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          tenant = tenantData.data || tenantData
+          console.log('✅ Dados do tenant recuperados:', tenant.name, tenant.plan)
+        } else if (tenantResponse.status === 404) {
+          console.error('❌ Tenant não encontrado no sistema')
+          toast.error('❌ Dados do escritório não encontrados. Contate o administrador.')
+          return
+        } else {
+          console.error('❌ Erro no tenant-service:', tenantResponse.status, tenantResponse.statusText)
+          toast.error(`❌ Erro no serviço do escritório (${tenantResponse.status}). Contate o suporte.`)
+          return
+        }
+      } catch (tenantError: any) {
+        console.error('❌ Erro crítico ao buscar tenant:', tenantError)
+        
+        // NO FALLBACK - System must be online
+        if (tenantError.name === 'AbortError') {
+          toast.error('❌ Timeout ao conectar com serviços. Verifique sua conexão.')
+        } else if (tenantError.message?.includes('fetch') || tenantError.code === 'ECONNREFUSED') {
+          toast.error('❌ Serviços indisponíveis. Contate o administrador do sistema.')
+        } else {
+          toast.error('❌ Erro ao carregar dados do escritório. Contate o suporte.')
+        }
+        return
+      }
+      
+      // Store authentication data
       loginStore(user, tenant, access_token)
-      console.log('Auth store updated, redirecting to dashboard...')
+      console.log('🚀 Login completo, redirecionando...')
+      toast.success(`Bem-vindo, ${user.first_name} ${user.last_name} (${user.role})`)
       router.push('/dashboard')
+      
     } catch (error: any) {
-      console.error('Login error:', error)
-      toast.error(error.response?.data?.message || 'Erro ao fazer login')
+      console.error('❌ Erro de autenticação:', error)
+      
+      // Handle specific error cases with clear user messages
+      if (error.response?.status === 400) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.error
+        if (errorMsg?.includes('credenciais inválidas') || errorMsg?.includes('senha')) {
+          toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.')
+        } else if (errorMsg?.includes('usuário não encontrado') || errorMsg?.includes('not found')) {
+          toast.error(`❌ Email "${data.email}" não encontrado. Verifique o email digitado.`)
+        } else {
+          toast.error(`❌ Erro: ${errorMsg}`)
+        }
+        console.error('Detalhes do erro 400:', error.response?.data)
+      } else if (error.response?.status === 401) {
+        toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.')
+      } else if (error.response?.status === 403) {
+        toast.error('❌ Usuário inativo ou sem permissão de acesso.')
+      } else if (error.response?.status === 404) {
+        toast.error(`❌ Email "${data.email}" não encontrado no sistema.`)
+      } else if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+        toast.error('🔌 Serviço de autenticação indisponível. Contate o suporte.')
+      } else if (error.message?.includes('não está cadastrado no sistema')) {
+        toast.error(`❌ Email "${data.email}" não está cadastrado. Entre em contato com o administrador.`)
+      } else {
+        // Generic error - show user-friendly message
+        toast.error('❌ Erro ao fazer login. Verifique suas credenciais ou contate o suporte.')
+        console.error('Erro completo:', error)
+      }
     }
   }
 

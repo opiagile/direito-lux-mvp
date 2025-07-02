@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useAuthStore } from './auth'
 import { useProcessStore } from './processes'
-import { SubscriptionPlan } from '@/types'
+import { useUsageStore } from './usage'
 
 interface Invoice {
   id: string
@@ -95,40 +95,46 @@ export const useBillingStore = create<BillingState>()(
       loadBillingData: () => {
         set({ isLoading: true })
         
-        // Get tenant info
-        const { tenant } = useAuthStore.getState()
-        if (!tenant) {
+        try {
+          // Get tenant info
+          const { tenant } = useAuthStore.getState()
+          if (!tenant) {
+            console.log('No tenant found in billing load')
+            set({ isLoading: false })
+            return
+          }
+
+          // Generate invoices based on tenant creation date
+          const invoices = generateInvoicesForTenant(tenant)
+          
+          // Get current usage
+          const currentUsage = get().calculateCurrentUsage()
+          
+          // Set default payment method for demo
+          const paymentMethod: PaymentMethod = {
+            id: 'pm_1',
+            type: 'credit_card',
+            last4: '4532',
+            brand: 'visa',
+            expiryMonth: 12,
+            expiryYear: 2027,
+            isDefault: true
+          }
+
+          set({ 
+            invoices, 
+            currentUsage, 
+            paymentMethod,
+            isLoading: false 
+          })
+        } catch (error) {
+          console.error('Error loading billing data:', error)
           set({ isLoading: false })
-          return
         }
-
-        // Generate invoices based on tenant creation date
-        const invoices = generateInvoicesForTenant(tenant)
-        
-        // Get current usage
-        const currentUsage = get().calculateCurrentUsage()
-        
-        // Set default payment method for demo
-        const paymentMethod: PaymentMethod = {
-          id: 'pm_1',
-          type: 'credit_card',
-          last4: '4532',
-          brand: 'visa',
-          expiryMonth: 12,
-          expiryYear: 2027,
-          isDefault: true
-        }
-
-        set({ 
-          invoices, 
-          currentUsage, 
-          paymentMethod,
-          isLoading: false 
-        })
       },
 
       calculateCurrentUsage: () => {
-        const { tenant, users } = useAuthStore.getState()
+        const { tenant } = useAuthStore.getState()
         const { processes } = useProcessStore.getState()
         
         if (!tenant) {
@@ -144,33 +150,57 @@ export const useBillingStore = create<BillingState>()(
 
         const limits = planLimits[tenant.plan as keyof typeof planLimits] || planLimits.starter
         
-        // Calculate real usage
+        // Get real usage
         const processCount = processes.length
-        const userCount = users?.length || 1
+        const userCount = 1 // We'll simulate having multiple users per tenant
         
-        // Simulate some usage for demo purposes
-        const today = new Date()
-        const dayOfMonth = today.getDate()
+        // Get usage from store if available, otherwise use demo values
+        let aiSummariesUsed = 0
+        let reportsUsed = 0
+        let datajudUsed = 0
+        let mcpUsed = 0
         
-        // Simulate AI summaries usage (random based on day)
-        const aiSummariesUsed = Math.min(
-          Math.floor((dayOfMonth / 30) * limits.aiSummaries * 0.3),
-          limits.aiSummaries
-        )
-        
-        // Simulate reports usage
-        const reportsUsed = Math.min(
-          Math.floor((dayOfMonth / 30) * limits.reports * 0.2),
-          limits.reports
-        )
-        
-        // Simulate DataJud queries (daily, so random for today)
-        const datajudUsed = Math.floor(Math.random() * limits.datajudQueries * 0.5)
-        
-        // Simulate MCP commands if available
-        const mcpUsed = limits.mcpCommands > 0 
-          ? Math.floor((dayOfMonth / 30) * limits.mcpCommands * 0.4)
-          : 0
+        try {
+          const usageStore = useUsageStore.getState()
+          
+          // Get base multiplier for demo data
+          const today = new Date()
+          const dayOfMonth = today.getDate()
+          const baseMultiplier = dayOfMonth / 30 // Progress through month
+          
+          // Calculate usage with tracked data + demo simulation
+          aiSummariesUsed = Math.min(
+            usageStore.metrics.aiSummaries + Math.floor(limits.aiSummaries * baseMultiplier * 0.2),
+            limits.aiSummaries === -1 ? 999999 : limits.aiSummaries
+          )
+          
+          reportsUsed = Math.min(
+            usageStore.metrics.reports + Math.floor(limits.reports * baseMultiplier * 0.15),
+            limits.reports === -1 ? 999999 : limits.reports
+          )
+          
+          // DataJud is daily, so use less of the month multiplier
+          datajudUsed = Math.min(
+            usageStore.metrics.datajudQueries + Math.floor(limits.datajudQueries * 0.3),
+            limits.datajudQueries
+          )
+          
+          // MCP commands if available
+          mcpUsed = limits.mcpCommands > 0 
+            ? Math.min(
+                usageStore.metrics.mcpCommands + Math.floor(limits.mcpCommands * baseMultiplier * 0.25),
+                limits.mcpCommands === -1 ? 999999 : limits.mcpCommands
+              )
+            : 0
+        } catch (e) {
+          console.error('Error getting usage metrics:', e)
+          // Use fallback demo values
+          const dayOfMonth = new Date().getDate()
+          aiSummariesUsed = Math.floor((dayOfMonth / 30) * limits.aiSummaries * 0.3)
+          reportsUsed = Math.floor((dayOfMonth / 30) * limits.reports * 0.2)
+          datajudUsed = Math.floor(limits.datajudQueries * 0.4)
+          mcpUsed = limits.mcpCommands > 0 ? Math.floor((dayOfMonth / 30) * limits.mcpCommands * 0.3) : 0
+        }
 
         return {
           processes: { 

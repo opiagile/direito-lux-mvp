@@ -139,7 +139,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: dev_grafana_123
       GF_USERS_ALLOW_SIGN_UP: false
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infrastructure/grafana/datasources:/etc/grafana/provisioning/datasources
@@ -182,7 +182,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-auth
     environment:
-      - PORT=8080
+      - PORT=8082
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev
@@ -200,6 +200,7 @@ services:
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - JWT_SECRET=dev_jwt_secret_direito_lux_2024_super_secure_key_123
       - LOG_LEVEL=debug
+      - PORT=8080
     ports:
       - "8081:8080"
     depends_on:
@@ -224,7 +225,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-tenant
     environment:
-      - PORT=8080
+      - PORT=8082
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev
@@ -237,6 +238,7 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:8080
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
+      - PORT=8080
     ports:
       - "8082:8080"
     depends_on:
@@ -250,7 +252,6 @@ services:
         condition: service_started
     volumes:
       - ./services/tenant-service:/app
-      - /app/vendor
     networks:
       - direito-lux-network
     restart: unless-stopped
@@ -277,6 +278,7 @@ services:
       - DATAJUD_SERVICE_URL=http://datajud-service:8080
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
+      - PORT=8080
     ports:
       - "8083:8080"
     depends_on:
@@ -304,7 +306,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-datajud
     environment:
-      - PORT=8080
+      - PORT=8082
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev
@@ -319,6 +321,7 @@ services:
       - RATE_LIMIT_DAILY=10000
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
+      - PORT=8080
     ports:
       - "8084:8080"
     depends_on:
@@ -342,7 +345,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-notification
     environment:
-      - PORT=8080
+      - PORT=8082
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev
@@ -468,6 +471,7 @@ services:
       - AI_SERVICE_URL=http://ai-service:8000
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
+      - PORT=8080
       - MAX_SEARCH_RESULTS=100
       - DEFAULT_PAGE_SIZE=20
       - SEARCH_CACHE_TTL=5m

@@ -61,11 +61,9 @@ export const useLogin = () => {
         localStorage.setItem('auth_token', data.access_token)
       }
       queryClient.setQueryData(queryKeys.auth, data)
-      toast.success('Login realizado com sucesso!')
+      // Remove automatic success toast - component will handle it
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao fazer login')
-    },
+    // Remove automatic error toast - component will handle errors
   })
 }
 

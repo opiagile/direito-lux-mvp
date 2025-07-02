@@ -1,24 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Search, 
   Filter, 
   Plus, 
   MoreVertical, 
-  Eye,
   Edit,
   Trash,
   UserCheck,
   UserX,
   Shield,
   Mail,
-  Phone,
-  Calendar
+  Calendar,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -34,66 +33,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useAuthStore } from '@/store'
+import { useAuthStore, useUserStore } from '@/store'
 import { formatDate } from '@/lib/utils'
 import { User, UserRole } from '@/types'
-
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'admin@silvaassociados.com.br',
-    name: 'Carlos Silva',
-    role: 'admin',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    isActive: true,
-    createdAt: '2024-01-15T09:00:00Z',
-    updatedAt: '2025-01-20T14:30:00Z'
-  },
-  {
-    id: '2',
-    email: 'gerente@silvaassociados.com.br',
-    name: 'Ana Paula Santos',
-    role: 'manager',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    isActive: true,
-    createdAt: '2024-01-16T10:00:00Z',
-    updatedAt: '2025-01-19T16:20:00Z'
-  },
-  {
-    id: '3',
-    email: 'advogado@silvaassociados.com.br',
-    name: 'Dr. Roberto Lima',
-    role: 'lawyer',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    isActive: true,
-    createdAt: '2024-01-17T11:00:00Z',
-    updatedAt: '2025-01-18T12:45:00Z'
-  },
-  {
-    id: '4',
-    email: 'cliente@silvaassociados.com.br',
-    name: 'Maria José Oliveira',
-    role: 'assistant',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    isActive: true,
-    createdAt: '2024-01-18T14:00:00Z',
-    updatedAt: '2025-01-17T09:15:00Z'
-  },
-  {
-    id: '5',
-    email: 'advogado2@silvaassociados.com.br',
-    name: 'Dra. Fernanda Costa',
-    role: 'lawyer',
-    tenantId: '11111111-1111-1111-1111-111111111111',
-    isActive: false,
-    createdAt: '2024-02-01T08:00:00Z',
-    updatedAt: '2025-01-10T11:30:00Z'
-  }
-]
+import UserModal from '@/components/users/UserModal'
+import { useUsersAPI } from '@/hooks/useUsersAPI'
 
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  
   const { user: currentUser } = useAuthStore()
+  const {
+    getUsersForCurrentTenant,
+    addUser,
+    updateUser,
+    deleteUser,
+    toggleUserStatus,
+    checkUserQuota,
+    loadInitialUsers
+  } = useUserStore()
+
+  // Load initial users if needed
+  useEffect(() => {
+    loadInitialUsers()
+  }, [loadInitialUsers])
+
+  // Get users for current tenant from API
+  const { data: allUsers = [], isLoading: usersLoading, error: usersError } = useUsersAPI()
+  const quotaInfo = checkUserQuota()
 
   // Verificar permissões - apenas admin pode acessar
   if (currentUser?.role !== 'admin') {
@@ -112,7 +81,39 @@ export default function UsersPage() {
     )
   }
 
-  const filteredUsers = mockUsers.filter(user => 
+  // Loading state
+  if (usersLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando usuários...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (usersError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold mb-2 text-red-600">Erro ao Carregar Usuários</h2>
+            <p className="text-muted-foreground mb-4">
+              {usersError?.message || 'Não foi possível carregar a lista de usuários'}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const filteredUsers = allUsers.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.role.toLowerCase().includes(searchQuery.toLowerCase())
@@ -146,6 +147,36 @@ export default function UsersPage() {
     return isActive ? 'Ativo' : 'Inativo'
   }
 
+  const handleNewUser = () => {
+    setSelectedUser(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user)
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteUser = (userId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
+      deleteUser(userId)
+    }
+  }
+
+  const handleToggleStatus = (userId: string) => {
+    toggleUserStatus(userId)
+  }
+
+  const handleSubmitUser = (userData: { name: string; email: string; role: UserRole; isActive: boolean }) => {
+    if (selectedUser) {
+      updateUser(selectedUser.id, userData)
+    } else {
+      addUser(userData)
+    }
+    setIsModalOpen(false)
+    setSelectedUser(null)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,10 +188,26 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
+          <Button onClick={handleNewUser} disabled={!quotaInfo.canAdd}>
             <Plus className="w-4 h-4 mr-2" />
             Novo Usuário
           </Button>
+          {!quotaInfo.canAdd && (
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-red-600 flex items-center">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                Limite atingido: {quotaInfo.used}/{quotaInfo.limit === -1 ? '∞' : quotaInfo.limit} usuários
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                onClick={() => window.open('/billing', '_blank')}
+              >
+                🚀 Upgrade Plano
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -249,19 +296,11 @@ export default function UsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Visualizar Perfil
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Editar Usuário
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Shield className="w-4 h-4 mr-2" />
-                          Alterar Permissões
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleStatus(user.id)}>
                           {user.isActive ? (
                             <>
                               <UserX className="w-4 h-4 mr-2" />
@@ -275,7 +314,10 @@ export default function UsersPage() {
                           )}
                         </DropdownMenuItem>
                         {user.id !== currentUser?.id && (
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem 
+                            className="text-red-600" 
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
                             <Trash className="w-4 h-4 mr-2" />
                             Excluir
                           </DropdownMenuItem>
@@ -295,7 +337,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredUsers.length}
+              {allUsers.length}
             </div>
             <p className="text-xs text-muted-foreground">
               Total de usuários
@@ -305,7 +347,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredUsers.filter(u => u.isActive).length}
+              {allUsers.filter(u => u.isActive).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Usuários ativos
@@ -315,7 +357,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredUsers.filter(u => u.role === 'admin').length}
+              {allUsers.filter(u => u.role === 'admin').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Administradores
@@ -325,7 +367,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredUsers.filter(u => u.role === 'lawyer').length}
+              {allUsers.filter(u => u.role === 'lawyer').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Advogados
@@ -333,6 +375,18 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* User Modal */}
+      <UserModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedUser(null)
+        }}
+        onSubmit={handleSubmitUser}
+        user={selectedUser}
+        quotaInfo={quotaInfo}
+      />
     </div>
   )
 }

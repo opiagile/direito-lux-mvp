@@ -52,7 +52,7 @@ func NewAuthService(
 type LoginRequest struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required"`
-	TenantID  string `json:"tenant_id" validate:"required"`
+	TenantID  string `json:"tenant_id"` // Optional - will be resolved from user's tenant
 	IPAddress string `json:"ip_address"`
 	UserAgent string `json:"user_agent"`
 }
@@ -73,6 +73,7 @@ type UserDTO struct {
 	LastName  string               `json:"last_name"`
 	Role      domain.UserRole      `json:"role"`
 	Status    domain.UserStatus    `json:"status"`
+	TenantID  string               `json:"tenant_id"`
 	CreatedAt time.Time            `json:"created_at"`
 }
 
@@ -121,8 +122,11 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		return nil, domain.ErrUserNotFound
 	}
 	
-	// Verificar se o usuário pertence ao tenant correto
-	if user.TenantID != req.TenantID {
+	// Se TenantID não foi fornecido, usar o do usuário
+	if req.TenantID == "" {
+		req.TenantID = user.TenantID
+	} else if user.TenantID != req.TenantID {
+		// Se fornecido, verificar se corresponde ao usuário
 		s.recordLoginAttempt(req.Email, req.TenantID, req.IPAddress, req.UserAgent, false)
 		
 		// TODO: Publish login failed event
@@ -220,6 +224,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 			LastName:  user.LastName,
 			Role:      user.Role,
 			Status:    user.Status,
+			TenantID:  user.TenantID,
 			CreatedAt: user.CreatedAt,
 		},
 	}, nil
@@ -321,6 +326,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 			LastName:  user.LastName,
 			Role:      user.Role,
 			Status:    user.Status,
+			TenantID:  user.TenantID,
 			CreatedAt: user.CreatedAt,
 		},
 	}, nil

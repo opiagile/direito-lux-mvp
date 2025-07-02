@@ -18,7 +18,8 @@ import {
   Bot,
   ArrowUp,
   ArrowDown,
-  Shield
+  Shield,
+  BarChart3
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,9 +33,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useAuthStore, useBillingStore } from '@/store'
+import { useAuthStore, useBillingStore, useUsageStore } from '@/store'
+import { useUsageActions } from '@/hooks/useUsageActions'
 import { formatDate } from '@/lib/utils'
-import { SubscriptionPlan, SubscriptionStatus } from '@/types'
 
 interface Invoice {
   id: string
@@ -128,11 +129,33 @@ export default function BillingPage() {
     loadBillingData,
     downloadInvoice 
   } = useBillingStore()
+  const { simulateRealisticActivity, recordDataJudQuery, recordAISummary, recordReport, recordMCPCommand } = useUsageActions()
 
   // Load billing data on component mount
   useEffect(() => {
+    console.log('Loading billing data...')
     loadBillingData()
-  }, [loadBillingData])
+    
+    // Safety timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.error('Billing loading timeout - forcing complete')
+        // Force set some default data if still loading after 5 seconds
+        useBillingStore.setState({ isLoading: false })
+      }
+    }, 5000)
+    
+    // Simulate some background activity for demonstration
+    // This makes the usage numbers more realistic and dynamic
+    const activityTimer = setTimeout(() => {
+      simulateRealisticActivity()
+    }, 2000)
+
+    return () => {
+      clearTimeout(loadingTimeout)
+      clearTimeout(activityTimer)
+    }
+  }, []) // Empty dependency array - only run once on mount
 
   // Verificar permissões - apenas admin pode acessar billing
   if (currentUser?.role !== 'admin') {
@@ -152,13 +175,33 @@ export default function BillingPage() {
   }
 
   // Show loading state
-  if (isLoading || !currentUsage) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando dados de billing...</p>
         </div>
+      </div>
+    )
+  }
+
+  // If no usage data, show empty state
+  if (!currentUsage) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold mb-2">Dados de Billing Indisponíveis</h2>
+            <p className="text-muted-foreground mb-4">
+              Não foi possível carregar os dados de billing. Por favor, tente novamente.
+            </p>
+            <Button onClick={() => loadBillingData()}>
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -272,7 +315,7 @@ export default function BillingPage() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Usage Cards */}
             <Card>
               <CardHeader>
@@ -322,9 +365,23 @@ export default function BillingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Zap className="w-5 h-5" />
-                  <span>Resumos IA</span>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-5 h-5" />
+                    <span>Resumos IA</span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      recordAISummary()
+                      // Reload billing data after a short delay to show the update
+                      setTimeout(() => loadBillingData(), 100)
+                    }}
+                    className="text-xs"
+                  >
+                    Testar +1
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -345,9 +402,60 @@ export default function BillingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Bot className="w-5 h-5" />
-                  <span>MCP Bot</span>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Relatórios</span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      recordReport()
+                      setTimeout(() => loadBillingData(), 100)
+                    }}
+                    className="text-xs"
+                  >
+                    Testar +1
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{currentUsage.reports.used} de {currentUsage.reports.limit === -1 ? '∞' : currentUsage.reports.limit}</span>
+                    <span>{getUsagePercentage(currentUsage.reports.used, currentUsage.reports.limit)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${getUsageColor(getUsagePercentage(currentUsage.reports.used, currentUsage.reports.limit))}`}
+                      style={{ width: `${getUsagePercentage(currentUsage.reports.used, currentUsage.reports.limit)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Bot className="w-5 h-5" />
+                    <span>MCP Bot</span>
+                  </div>
+                  {currentUsage.mcpCommands.limit > 0 && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        recordMCPCommand()
+                        setTimeout(() => loadBillingData(), 100)
+                      }}
+                      className="text-xs"
+                    >
+                      Testar +1
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -382,7 +490,20 @@ export default function BillingPage() {
           {/* DataJud Quota */}
           <Card>
             <CardHeader>
-              <CardTitle>Quota DataJud CNJ</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Quota DataJud CNJ</span>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    recordDataJudQuery()
+                    setTimeout(() => loadBillingData(), 100)
+                  }}
+                  className="text-xs"
+                >
+                  Testar +1
+                </Button>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

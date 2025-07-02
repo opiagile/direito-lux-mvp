@@ -56,16 +56,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	req.IPAddress = c.ClientIP()
 	req.UserAgent = c.GetHeader("User-Agent")
 	
-	// Extrair tenant ID do header
+	// Tenant ID será obtido do banco baseado no email do usuário
+	// Não é necessário fornecer X-Tenant-ID no login
 	tenantID := c.GetHeader("X-Tenant-ID")
-	if tenantID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "Tenant ID obrigatório",
-			Message: "Header X-Tenant-ID é obrigatório",
-		})
-		return
-	}
-	req.TenantID = tenantID
+	req.TenantID = tenantID // Pode ser vazio, será resolvido no service
 	
 	logging.LogInfo(c.Request.Context(), h.logger, "Tentativa de login",
 		zap.String("email", req.Email),

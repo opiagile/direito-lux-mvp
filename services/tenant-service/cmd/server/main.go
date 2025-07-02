@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/direito-lux/tenant-service/internal/infrastructure/config"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/database"
-	"github.com/direito-lux/tenant-service/internal/infrastructure/events"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/http"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/logging"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/metrics"
@@ -19,24 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// @title Template Service API
+// @title Tenant Service API
 // @version 1.0
-// @description Direito Lux Template Microservice
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.url http://www.direitolux.com/support
-// @contact.email support@direitolux.com
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
-
-// @host localhost:8080
-// @BasePath /api/v1
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
+// @description Direito Lux Tenant Microservice
 
 func main() {
 	// Carregar configurações
@@ -59,25 +42,23 @@ func main() {
 		}
 	}()
 
-	logger.Info("Iniciando Template Service",
+	logger.Info("Iniciando Tenant Service",
 		zap.String("version", cfg.Version),
 		zap.String("environment", cfg.Environment),
 		zap.Int("port", cfg.Port),
 	)
 
-	// Usar Fx para injeção de dependência
+	// Usar Fx para injeção de dependência (simplificado)
 	app := fx.New(
 		fx.Supply(cfg),
 		fx.Supply(logger),
 		
-		// Infraestrutura
+		// Infraestrutura básica
 		fx.Provide(
 			metrics.NewMetrics,
-			database.NewConnection,
-			events.NewEventBus,
 		),
 
-		// HTTP Server
+		// HTTP Server (simplificado)
 		fx.Provide(http.NewServer),
 		
 		// Lifecycle hooks
@@ -97,7 +78,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Parando Template Service...")
+	logger.Info("Parando Tenant Service...")
 
 	// Parar aplicação
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
@@ -107,7 +88,7 @@ func main() {
 		logger.Error("Erro ao parar aplicação", zap.Error(err))
 	}
 
-	logger.Info("Template Service parado com sucesso")
+	logger.Info("Tenant Service parado com sucesso")
 }
 
 // registerHooks registra hooks do ciclo de vida da aplicação
@@ -138,8 +119,6 @@ func registerHooks(
 				logger.Error("Erro ao parar servidor HTTP", zap.Error(err))
 				return err
 			}
-
-			// Outros recursos podem ser fechados aqui
 
 			return nil
 		},

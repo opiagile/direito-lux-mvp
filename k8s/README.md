@@ -136,7 +136,7 @@ The `deploy.sh` script provides a complete deployment automation solution:
 | **Redis** | 6379 | Caching and sessions |
 | **RabbitMQ** | 5672/15672 | Message broker |
 | **Prometheus** | 9090 | Metrics collection |
-| **Grafana** | 3000 | Monitoring dashboards |
+| **Grafana** | 3002 | Monitoring dashboards |
 
 ## 📊 Resource Requirements
 

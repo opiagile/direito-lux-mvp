@@ -230,11 +230,11 @@ docker-compose logs -f auth-service
 - 🔧 Redis Commander: http://localhost:8091
 - 🔧 pgAdmin: http://localhost:5050 (admin@direitolux.com / dev_pgadmin_123)
 - 📧 MailHog: http://localhost:8025
-- 📊 Grafana: http://localhost:3000 (admin / dev_grafana_123)
+- 📊 Grafana: http://localhost:3002 (admin / dev_grafana_123)
 
-**⚠️ CONFLITO DE PORTA**: Frontend (3000) vs Grafana (3000)
-- Para OPÇÃO A: Frontend roda na 3000, parar Grafana primeiro: `docker-compose stop grafana`
-- Para OPÇÃO B: Frontend não incluído no docker-compose, rodar separadamente na 3001
+**✅ PORTAS CONFIGURADAS**: 
+- Frontend Next.js: http://localhost:3000
+- Grafana: http://localhost:3002 (sem conflito)
 
 ## 👥 Usuários de Teste Disponíveis
 
