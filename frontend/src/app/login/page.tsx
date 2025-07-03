@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Lock, Mail, Building } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, Building, Clock, AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,8 @@ type LoginForm = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
+  const [isRateLimited, setIsRateLimited] = useState(false)
   const login = useLogin()
   const { login: loginStore } = useAuthStore()
 
@@ -38,20 +40,31 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      console.log('🔐 Autenticando com banco real:', data.email)
+      // Chamada direta sem React Query para evitar interferência
+      const result = await fetch('http://localhost:8081/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
       
-      // Make direct API call to auth service - NO MOCKS
-      const result = await login.mutateAsync(data)
-      console.log('✅ Resposta do auth-service:', result)
+      if (!result.ok) {
+        const errorData = await result.json()
+        throw { response: { status: result.status, data: errorData } }
+      }
+      
+      const authResult = await result.json()
+      console.log('🔍 Tipo da resposta:', typeof result, Object.keys(result || {}))
       
       // Validate response structure from real API
-      if (!result.user || !result.access_token) {
-        console.error('❌ Resposta inválida do auth-service:', result)
-        toast.error('Erro na resposta do servidor de autenticação')
+      if (!authResult.user || !authResult.access_token) {
+        console.error('❌ Resposta inválida do auth-service:', authResult)
+        setErrorMessage('Erro na resposta do servidor de autenticação')
         return
       }
       
-      const { user, access_token } = result
+      const { user, access_token } = authResult
       console.log('👤 Usuário autenticado:', user.email, user.role)
       console.log('🔍 Estrutura completa do user:', JSON.stringify(user, null, 2))
       console.log('🔍 Tenant ID do usuário:', user.tenant_id || user.tenantId || user.tenant_id)
@@ -118,33 +131,39 @@ export default function LoginPage() {
       router.push('/dashboard')
       
     } catch (error: any) {
-      console.error('❌ Erro de autenticação:', error)
-      
       // Handle specific error cases with clear user messages
-      if (error.response?.status === 400) {
+      if (error.response?.status === 429) {
+        const errorMsg = error.response?.data?.message || 'Muitas tentativas de login'
+        setIsRateLimited(true)
+        setErrorMessage(`🕐 ${errorMsg}`)
+        toast.error(`🕐 ${errorMsg}`, { duration: 10000 })
+      } else if (error.response?.status === 400) {
         const errorMsg = error.response?.data?.message || error.response?.data?.error
         if (errorMsg?.includes('credenciais inválidas') || errorMsg?.includes('senha')) {
-          toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.')
+          setErrorMessage('❌ Email ou senha incorretos. Verifique suas credenciais.')
+          toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.', { duration: 6000 })
         } else if (errorMsg?.includes('usuário não encontrado') || errorMsg?.includes('not found')) {
-          toast.error(`❌ Email "${data.email}" não encontrado. Verifique o email digitado.`)
+          setErrorMessage(`❌ Email "${data.email}" não encontrado. Verifique o email digitado.`)
+          toast.error(`❌ Email "${data.email}" não encontrado. Verifique o email digitado.`, { duration: 6000 })
         } else {
-          toast.error(`❌ Erro: ${errorMsg}`)
+          setErrorMessage(`❌ Erro: ${errorMsg}`)
+          toast.error(`❌ Erro: ${errorMsg}`, { duration: 6000 })
         }
-        console.error('Detalhes do erro 400:', error.response?.data)
       } else if (error.response?.status === 401) {
-        toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.')
+        setErrorMessage('❌ Email ou senha incorretos. Verifique suas credenciais.')
+        toast.error('❌ Email ou senha incorretos. Verifique suas credenciais.', { duration: 6000 })
       } else if (error.response?.status === 403) {
-        toast.error('❌ Usuário inativo ou sem permissão de acesso.')
+        setErrorMessage('❌ Usuário inativo ou sem permissão de acesso.')
+        toast.error('❌ Usuário inativo ou sem permissão de acesso.', { duration: 6000 })
       } else if (error.response?.status === 404) {
-        toast.error(`❌ Email "${data.email}" não encontrado no sistema.`)
+        setErrorMessage(`❌ Email "${data.email}" não encontrado no sistema.`)
+        toast.error(`❌ Email "${data.email}" não encontrado no sistema.`, { duration: 6000 })
       } else if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
-        toast.error('🔌 Serviço de autenticação indisponível. Contate o suporte.')
-      } else if (error.message?.includes('não está cadastrado no sistema')) {
-        toast.error(`❌ Email "${data.email}" não está cadastrado. Entre em contato com o administrador.`)
+        setErrorMessage('🔌 Serviço de autenticação indisponível. Contate o suporte.')
+        toast.error('🔌 Serviço de autenticação indisponível. Contate o suporte.', { duration: 6000 })
       } else {
-        // Generic error - show user-friendly message
-        toast.error('❌ Erro ao fazer login. Verifique suas credenciais ou contate o suporte.')
-        console.error('Erro completo:', error)
+        setErrorMessage('❌ Erro ao fazer login. Verifique suas credenciais ou contate o suporte.')
+        toast.error('❌ Erro ao fazer login. Verifique suas credenciais ou contate o suporte.', { duration: 6000 })
       }
     }
   }
@@ -217,11 +236,54 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={login.isPending}
+                disabled={login.isPending || isRateLimited || !!errorMessage}
               >
-                {login.isPending ? 'Entrando...' : 'Entrar'}
+                {login.isPending ? 'Entrando...' : 
+                 isRateLimited ? 'Aguarde...' :
+                 errorMessage ? 'Corrija os erros' : 'Entrar'}
               </Button>
             </form>
+
+            {/* Error Messages - Visível na tela */}
+            {errorMessage && (
+              <div className={`mt-4 p-3 rounded-lg border ${
+                isRateLimited 
+                  ? 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-200'
+                  : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center">
+                    {isRateLimited ? (
+                      <div className="flex-shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                    ) : (
+                      <div className="flex-shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="ml-3">
+                      <p className="text-sm font-medium">{errorMessage}</p>
+                      {isRateLimited && (
+                        <p className="text-xs mt-1 opacity-75">
+                          Aguarde alguns minutos antes de tentar novamente.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setErrorMessage('')
+                      setIsRateLimited(false)
+                    }}
+                    className="flex-shrink-0 ml-4 p-1 hover:bg-black/10 rounded transition-colors"
+                    aria-label="Fechar mensagem"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -240,6 +302,7 @@ export default function LoginPage() {
         <div className="mt-8 text-center text-xs text-gray-500">
           © 2025 Opiagile. Todos os direitos reservados.
         </div>
+        
       </div>
     </div>
   )

@@ -29,6 +29,14 @@ export default function RootLayout({
               richColors 
               closeButton
               expand
+              duration={8000}
+              toastOptions={{
+                style: {
+                  fontSize: '14px',
+                  padding: '16px',
+                  minHeight: '60px'
+                }
+              }}
             />
           </Providers>
         </ChunkLoadErrorBoundary>

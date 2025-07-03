@@ -24,8 +24,11 @@ import { formatNumber, formatPercentage } from '@/lib/utils'
 // Atividades devem vir de: GET /api/v1/reports/recent-activities
 
 export default function DashboardPage() {
-  const { data: processStats, isLoading } = useProcessStats()
+  const { data: processStats, isLoading, error } = useProcessStats()
   const { canPerformAction } = usePermissions()
+
+  // Handle missing endpoints gracefully
+  const hasProcessStats = processStats && !error
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -72,63 +75,79 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards - USANDO DADOS REAIS */}
+      {/* KPI Cards - USANDO DADOS REAIS OU PLACEHOLDERS */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {processStats && (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Processos</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(processStats.total || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  <span>Dados atualizados do sistema</span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Processos Ativos</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(processStats.active || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  <span>Em andamento no momento</span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Movimentações Hoje</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(processStats.todayMovements || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  <span>Novidades de hoje</span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Prazos Próximos</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(processStats.upcomingDeadlines || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  <span>Requerem atenção</span>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Processos</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {hasProcessStats ? formatNumber(processStats.total || 0) : '--'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {hasProcessStats ? 
+                <span>Dados atualizados do sistema</span> : 
+                <span className="text-orange-600">Aguardando API /processes/stats</span>
+              }
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processos Ativos</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {hasProcessStats ? formatNumber(processStats.active || 0) : '--'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {hasProcessStats ? 
+                <span>Em andamento no momento</span> : 
+                <span className="text-orange-600">Aguardando API /processes/stats</span>
+              }
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Movimentações Hoje</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {hasProcessStats ? formatNumber(processStats.todayMovements || 0) : '--'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {hasProcessStats ? 
+                <span>Novidades de hoje</span> : 
+                <span className="text-orange-600">Aguardando API /processes/stats</span>
+              }
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prazos Próximos</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {hasProcessStats ? formatNumber(processStats.upcomingDeadlines || 0) : '--'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {hasProcessStats ? 
+                <span>Requerem atenção</span> : 
+                <span className="text-orange-600">Aguardando API /processes/stats</span>
+              }
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

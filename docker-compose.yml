@@ -225,7 +225,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: direito-lux-tenant
     environment:
-      - PORT=8082
+      - PORT=8080
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=direito_lux_dev
@@ -238,7 +238,6 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:8080
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
-      - PORT=8080
     ports:
       - "8082:8080"
     depends_on:

@@ -63,7 +63,14 @@ export const useLogin = () => {
       queryClient.setQueryData(queryKeys.auth, data)
       // Remove automatic success toast - component will handle it
     },
-    // Remove automatic error toast - component will handle errors
+    onError: (error: any) => {
+      // Log error for debugging but don't show toast here - component will handle it
+      console.log('🔍 useLogin onError capturado:', error)
+      console.log('🔍 Error response:', error.response)
+      console.log('🔍 Error status:', error.response?.status)
+      // Error is automatically propagated to component by react-query
+    },
+    throwOnError: true // Ensure error is thrown to component catch block
   })
 }
 
@@ -103,6 +110,10 @@ export const useProcessStats = () => {
     queryKey: queryKeys.processStats,
     queryFn: processAPI.getStats,
     staleTime: 60 * 1000, // 1 minute
+    retry: false, // Don't retry 404s
+    meta: {
+      errorHandler: 'silent' // Don't show toast errors for missing endpoints
+    }
   })
 }
 

@@ -11,15 +11,19 @@ import (
 	"github.com/direito-lux/tenant-service/internal/infrastructure/config"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/metrics"
 	"github.com/direito-lux/tenant-service/internal/infrastructure/http/middleware"
+	"github.com/direito-lux/tenant-service/internal/infrastructure/database"
+	"github.com/direito-lux/tenant-service/internal/infrastructure/repository"
+	"github.com/direito-lux/tenant-service/internal/domain"
 )
 
 // Server estrutura do servidor HTTP
 type Server struct {
-	config     *config.Config
-	logger     *zap.Logger
-	metrics    *metrics.Metrics
-	server     *http.Server
-	router     *gin.Engine
+	config         *config.Config
+	logger         *zap.Logger
+	metrics        *metrics.Metrics
+	server         *http.Server
+	router         *gin.Engine
+	tenantRepo     domain.TenantRepository
 }
 
 // NewServer cria nova instância do servidor HTTP
@@ -34,10 +38,11 @@ func NewServer(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metrics)
 	router := gin.New()
 
 	server := &Server{
-		config:  cfg,
-		logger:  logger,
-		metrics: metrics,
-		router:  router,
+		config:     cfg,
+		logger:     logger,
+		metrics:    metrics,
+		router:     router,
+		tenantRepo: nil, // Will be initialized in Start()
 	}
 
 	// Configurar middlewares
@@ -103,7 +108,7 @@ func (s *Server) setupRoutes() {
 		// Tenant endpoints - USING CORRECTED HANDLERS
 		tenants := api.Group("/tenants")
 		{
-			tenants.GET("/:id", s.getTenantFromDB) // Using the corrected method below
+			tenants.GET("/:id", s.getTenantByID) // REAL DATABASE QUERY
 		}
 	}
 
@@ -142,97 +147,69 @@ func (s *Server) ping(c *gin.Context) {
 	})
 }
 
-// getTenantFromDB - REAL DATABASE QUERY IMPLEMENTATION
-func (s *Server) getTenantFromDB(c *gin.Context) {
+// getTenantByID - REAL POSTGRESQL DATABASE QUERY
+func (s *Server) getTenantByID(c *gin.Context) {
 	tenantID := c.Param("id")
 	
-	s.logger.Info("Fetching tenant from PostgreSQL", zap.String("tenant_id", tenantID))
+	s.logger.Info("🔍 Fetching tenant from PostgreSQL database", zap.String("tenant_id", tenantID))
 	
-	// IMPLEMENTAÇÃO REAL: Conectar ao PostgreSQL
-	// TODO: Implementar repository real quando disponível
-	// Por enquanto, query direta simulando busca real no banco
-	
-	// Query real que seria executada:
-	// SELECT t.id, t.name, t.cnpj, t.email, t.is_active, t.created_at, t.updated_at,
-	//        s.plan_type, s.status, s.start_date, s.trial
-	// FROM tenants t
-	// LEFT JOIN subscriptions s ON t.id = s.tenant_id  
-	// WHERE t.id = $1
-	
-	var tenant map[string]interface{}
-	
-	// Simular busca real no banco (dados refletem schema real)
-	switch tenantID {
-	case "11111111-1111-1111-1111-111111111111":
-		tenant = map[string]interface{}{
-			"id":        tenantID,
-			"name":      "Silva & Associados",
-			"cnpj":      "12.345.678/0001-99", 
-			"email":     "admin@silvaassociados.com.br",
-			"plan":      "starter",
-			"isActive":  true,
-			"createdAt": "2025-01-01T00:00:00Z",
-			"updatedAt": "2025-01-01T00:00:00Z",
-			"subscription": map[string]interface{}{
-				"id":        tenantID + "-sub",
-				"tenantId":  tenantID,
-				"plan":      "starter",
-				"status":    "active",
-				"startDate": "2025-01-01T00:00:00Z",
-				"trial":     false,
-				"quotas": map[string]interface{}{
-					"processes":           50,
-					"users":               2,
-					"mcpCommands":         0,
-					"aiSummaries":         10,
-					"reports":             10,
-					"dashboards":          5,
-					"widgetsPerDashboard": 5,
-					"schedules":           10,
-				},
-			},
+	// ✅ REAL DATABASE QUERY - NO MORE HARDCODED SWITCH CASES!
+	tenant, err := s.tenantRepo.GetByID(tenantID)
+	if err != nil {
+		if err == domain.ErrTenantNotFound {
+			s.logger.Warn("❌ Tenant not found in database", zap.String("tenant_id", tenantID))
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Tenant not found",
+				"message": "O escritório especificado não foi encontrado no sistema",
+			})
+			return
 		}
-	case "22222222-2222-2222-2222-222222222222":
-		tenant = map[string]interface{}{
-			"id":        tenantID,
-			"name":      "Costa Santos Advogados",
-			"cnpj":      "22.222.222/0001-22",
-			"email":     "admin@costasantos.com.br", 
-			"plan":      "professional",
-			"isActive":  true,
-			"createdAt": "2025-01-01T00:00:00Z",
-			"updatedAt": "2025-01-01T00:00:00Z",
-			"subscription": map[string]interface{}{
-				"id":        tenantID + "-sub",
-				"tenantId":  tenantID,
-				"plan":      "professional",
-				"status":    "active",
-				"startDate": "2025-01-01T00:00:00Z",
-				"trial":     false,
-				"quotas": map[string]interface{}{
-					"processes":           200,
-					"users":               5,
-					"mcpCommands":         1000,
-					"aiSummaries":         100,
-					"reports":             50,
-					"dashboards":          10,
-					"widgetsPerDashboard": 8,
-					"schedules":           20,
-				},
-			},
-		}
-	default:
-		s.logger.Warn("Tenant not found", zap.String("tenant_id", tenantID))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tenant not found"})
+		
+		s.logger.Error("❌ Database error fetching tenant", 
+			zap.String("tenant_id", tenantID),
+			zap.Error(err),
+		)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Internal server error",
+			"message": "Erro ao buscar dados do escritório",
+		})
 		return
 	}
 	
-	s.logger.Info("Tenant retrieved successfully", 
+	// Convert domain.Tenant to API response format
+	response := map[string]interface{}{
+		"id":        tenant.ID,
+		"name":      tenant.Name,
+		"legalName": tenant.LegalName,
+		"document":  tenant.Document,
+		"email":     tenant.Email,
+		"phone":     tenant.Phone,
+		"website":   tenant.Website,
+		"address":   tenant.Address,
+		"status":    tenant.Status,
+		"plan":      tenant.PlanType,
+		"isActive":  tenant.Status == domain.TenantStatusActive,
+		"createdAt": tenant.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		"updatedAt": tenant.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		"settings":  tenant.Settings,
+	}
+	
+	if tenant.ActivatedAt != nil {
+		response["activatedAt"] = tenant.ActivatedAt.Format("2006-01-02T15:04:05Z")
+	}
+	
+	if tenant.SuspendedAt != nil {
+		response["suspendedAt"] = tenant.SuspendedAt.Format("2006-01-02T15:04:05Z")
+	}
+	
+	s.logger.Info("✅ Tenant retrieved successfully from PostgreSQL", 
 		zap.String("tenant_id", tenantID),
-		zap.String("tenant_name", tenant["name"].(string)),
+		zap.String("tenant_name", tenant.Name),
+		zap.String("legal_name", tenant.LegalName),
+		zap.String("plan", string(tenant.PlanType)),
 	)
 	
-	c.JSON(http.StatusOK, gin.H{"data": tenant})
+	c.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // setupSwagger configura documentação Swagger
@@ -242,6 +219,25 @@ func (s *Server) setupSwagger() {
 
 // Start inicia o servidor HTTP
 func (s *Server) Start() error {
+	// Initialize database connection
+	s.logger.Info("🚀 Initializing database connection...")
+	
+	db, err := database.NewPostgreSQLConnection(s.config, s.logger)
+	if err != nil {
+		s.logger.Error("❌ Failed to connect to database", zap.Error(err))
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	
+	// Test database connection
+	if err := database.TestConnection(db, s.logger); err != nil {
+		s.logger.Error("❌ Database connection test failed", zap.Error(err))
+		return fmt.Errorf("database connection test failed: %w", err)
+	}
+	
+	// Initialize repository
+	s.tenantRepo = repository.NewPostgresTenantRepository(db, s.logger)
+	s.logger.Info("✅ Database and repository initialized successfully")
+
 	s.logger.Info("Iniciando servidor HTTP",
 		zap.String("addr", s.server.Addr),
 		zap.String("environment", s.config.Environment),
