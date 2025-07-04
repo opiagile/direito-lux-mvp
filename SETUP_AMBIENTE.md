@@ -211,6 +211,9 @@ make dev
 - **Auth Service**: http://localhost:8081
 - **Tenant Service**: http://localhost:8082
 - **Process Service**: http://localhost:8083
+- **DataJud Service**: http://localhost:8084
+- **Report Service**: http://localhost:8087
+- **Frontend Web App**: http://localhost:3000
 
 ### Infraestrutura
 - **PostgreSQL**: localhost:5432

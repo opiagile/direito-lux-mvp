@@ -332,7 +332,6 @@ services:
         condition: service_healthy
     volumes:
       - ./services/datajud-service:/app
-      - /app/vendor
     networks:
       - direito-lux-network
     restart: unless-stopped
@@ -377,6 +376,46 @@ services:
     volumes:
       - ./services/notification-service:/app
       - /app/vendor
+    networks:
+      - direito-lux-network
+    restart: unless-stopped
+
+  # Report Service
+  report-service:
+    build:
+      context: ./services/report-service
+      dockerfile: Dockerfile.dev
+    container_name: direito-lux-report
+    environment:
+      - PORT=8087
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=direito_lux_dev
+      - DB_USER=direito_lux
+      - DB_PASSWORD=dev_password_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=dev_redis_123
+      - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
+      - PROCESS_SERVICE_URL=http://process-service:8080
+      - DATAJUD_SERVICE_URL=http://datajud-service:8080
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - LOG_LEVEL=debug
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      process-service:
+        condition: service_started
+      datajud-service:
+        condition: service_started
+    volumes:
+      - ./services/report-service:/app
     networks:
       - direito-lux-network
     restart: unless-stopped

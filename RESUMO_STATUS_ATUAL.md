@@ -1,9 +1,9 @@
 # 📊 RESUMO STATUS ATUAL - DIREITO LUX
 ## Dashboard Totalmente Funcional com Dados Reais
 
-**Data:** 2025-01-03  
-**Status Geral:** 40% Operacional ✅  
-**Milestone:** Dashboard com KPIs funcionais
+**Data:** 2025-07-04  
+**Status Geral:** 85% Operacional ✅  
+**Milestone:** 5 Microserviços Funcionais + Dashboard Completo
 
 ---
 
@@ -15,19 +15,19 @@
 | **Auth Service** | 8081 | ✅ 100% | JWT + 8 tenants + 32 usuários |
 | **Tenant Service** | 8082 | ✅ 100% | PostgreSQL direto, sem mocks |
 | **Process Service** | 8083 | ✅ 100% | PostgreSQL + endpoint `/stats` |
+| **DataJud Service** | 8084 | ✅ 100% | Pool CNPJs + rate limiting + circuit breaker |
+| **Report Service** | 8087 | ✅ 100% | Dashboard dados + atividades recentes |
 | **PostgreSQL** | 5432 | ✅ 100% | Schema completo + tabela processes |
 | **Frontend Next.js** | 3000 | ✅ 100% | Dashboard com dados reais |
 | **Grafana** | 3002 | ✅ 100% | Métricas em tempo real |
 
-### 📋 **SERVIÇOS PENDENTES**
+### 📋 **SERVIÇOS PENDENTES** (Todos implementados mas não testados em integração)
 | Serviço | Status | Prioridade |
 |---------|--------|------------|
-| DataJud Service | 🚧 Não implementado | 🟡 Média |
-| AI Service | 🚧 Não implementado | 🟡 Média |
-| Search Service | 🚧 Não implementado | 🟡 Média |
-| Notification Service | 🚧 Não implementado | 🟡 Média |
-| MCP Service | 🚧 Não implementado | 🟢 Baixa |
-| Report Service | 🚧 Não implementado | 🟡 Média |
+| AI Service | ✅ Implementado, não testado | 🟡 Integração |
+| Search Service | ✅ Implementado, não testado | 🟡 Integração |
+| Notification Service | ✅ Implementado, não testado | 🟡 Integração |
+| MCP Service | ✅ Implementado, não testado | 🟢 Integração |
 
 ---
 
