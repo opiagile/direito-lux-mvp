@@ -96,14 +96,17 @@ func (s *Server) setupRoutes() {
 		// Example routes
 		api.GET("/ping", handlers.Ping())
 		
-		// Template endpoints
-		templates := api.Group("/templates")
+		// Process endpoints (REAL - substituindo templates)
+		processes := api.Group("/processes")
 		{
-			templates.GET("", handlers.ListTemplates())
-			templates.POST("", handlers.CreateTemplate())
-			templates.GET("/:id", handlers.GetTemplate())
-			templates.PUT("/:id", handlers.UpdateTemplate())
-			templates.DELETE("/:id", handlers.DeleteTemplate())
+			// Inicializar handlers de processos (será injetado via DI depois)
+			// Por enquanto, endpoints básicos sem DB
+			processes.GET("", s.listProcesses())
+			processes.POST("", s.createProcess())
+			processes.GET("/:id", s.getProcess())
+			processes.PUT("/:id", s.updateProcess())
+			processes.DELETE("/:id", s.deleteProcess())
+			processes.GET("/stats", s.getProcessStats()) // CRÍTICO para dashboard
 		}
 	}
 
@@ -143,4 +146,146 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	s.logger.Info("Servidor HTTP parado com sucesso")
 	return nil
+}
+
+// Métodos para endpoints de processos (implementação temporária simples)
+
+// getProcessStats retorna estatísticas de processos
+func (s *Server) getProcessStats() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		// Implementação temporária com dados fixos - TODO: conectar DB
+		stats := gin.H{
+			"total":      45,
+			"active":     38,
+			"paused":     5,
+			"archived":   2,
+			"this_month": 12,
+		}
+
+		s.logger.Info("Retornando estatísticas de processos",
+			zap.String("tenant_id", tenantID),
+			zap.Any("stats", stats),
+		)
+
+		c.JSON(200, gin.H{
+			"data": stats,
+			"timestamp": "2025-01-05T10:30:00Z",
+		})
+	}
+}
+
+// listProcesses lista processos
+func (s *Server) listProcesses() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		// Implementação temporária - TODO: conectar DB
+		processes := []gin.H{
+			{
+				"id":     "proc-1",
+				"number": "5001234-12.2024.8.26.0100",
+				"title":  "Ação de Cobrança - Cliente XYZ",
+				"court":  "TJSP",
+				"status": "active",
+			},
+		}
+
+		c.JSON(200, gin.H{
+			"data":  processes,
+			"total": len(processes),
+		})
+	}
+}
+
+// createProcess cria novo processo
+func (s *Server) createProcess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		// Implementação temporária - TODO: conectar DB
+		c.JSON(201, gin.H{
+			"data": gin.H{
+				"id":      "proc-new",
+				"message": "Processo criado com sucesso",
+			},
+		})
+	}
+}
+
+// getProcess busca processo por ID
+func (s *Server) getProcess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		processID := c.Param("id")
+		
+		// Implementação temporária - TODO: conectar DB
+		c.JSON(200, gin.H{
+			"data": gin.H{
+				"id":     processID,
+				"number": "5001234-12.2024.8.26.0100",
+				"title":  "Processo encontrado",
+			},
+		})
+	}
+}
+
+// updateProcess atualiza processo
+func (s *Server) updateProcess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		processID := c.Param("id")
+
+		// Implementação temporária - TODO: conectar DB
+		c.JSON(200, gin.H{
+			"data": gin.H{
+				"id":      processID,
+				"message": "Processo atualizado com sucesso",
+			},
+		})
+	}
+}
+
+// deleteProcess exclui processo
+func (s *Server) deleteProcess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			c.JSON(400, gin.H{"error": "X-Tenant-ID header é obrigatório"})
+			return
+		}
+
+		processID := c.Param("id")
+
+		// Implementação temporária - TODO: conectar DB
+		c.JSON(200, gin.H{
+			"data": gin.H{
+				"id":      processID,
+				"message": "Processo excluído com sucesso",
+			},
+		})
+	}
 }
