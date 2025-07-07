@@ -37,9 +37,8 @@ func NewServer(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metrics)
 
 	router := gin.New()
 
-	// Conectar ao banco de dados
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		"localhost", 5432, "direito_lux", "direito_lux_pass_dev", "direito_lux_dev", "disable")
+	// Conectar ao banco de dados usando configuração
+	dsn := cfg.GetDatabaseDSN()
 	
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
