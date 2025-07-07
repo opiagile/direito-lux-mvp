@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Core Infrastructure
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     environment:
       POSTGRES_DB: direito_lux_dev
       POSTGRES_USER: direito_lux
@@ -14,7 +14,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./shared/sql/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-EXEC", "pg_isready -U direito_lux -d direito_lux_dev"]
+      test: ["CMD-SHELL", "pg_isready -U direito_lux -d direito_lux_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,7 +48,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -245,7 +245,7 @@ services:
       - mcp_postgres_data:/var/lib/postgresql/data
       - ./mcp-service/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-EXEC", "pg_isready -U mcp_user -d direito_lux_mcp"]
+      test: ["CMD-SHELL", "pg_isready -U mcp_user -d direito_lux_mcp"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -279,7 +279,7 @@ services:
     volumes:
       - mcp_rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5

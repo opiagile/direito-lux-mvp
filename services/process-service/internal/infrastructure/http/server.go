@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 
 	"github.com/direito-lux/process-service/internal/infrastructure/config"
 	"github.com/direito-lux/process-service/internal/infrastructure/metrics"
@@ -21,6 +23,7 @@ type Server struct {
 	metrics    *metrics.Metrics
 	server     *http.Server
 	router     *gin.Engine
+	db         *sqlx.DB
 }
 
 // NewServer cria nova instância do servidor HTTP
@@ -34,11 +37,21 @@ func NewServer(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metrics)
 
 	router := gin.New()
 
+	// Conectar ao banco de dados
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		"localhost", 5432, "direito_lux", "direito_lux_pass_dev", "direito_lux_dev", "disable")
+	
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		logger.Fatal("Erro ao conectar ao banco de dados", zap.Error(err))
+	}
+
 	server := &Server{
 		config:  cfg,
 		logger:  logger,
 		metrics: metrics,
 		router:  router,
+		db:      db,
 	}
 
 	// Configurar middlewares
@@ -144,6 +157,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return fmt.Errorf("erro ao parar servidor: %w", err)
 	}
 
+	// Fechar conexão com banco de dados
+	if s.db != nil {
+		s.db.Close()
+	}
+
 	s.logger.Info("Servidor HTTP parado com sucesso")
 	return nil
 }
@@ -159,13 +177,44 @@ func (s *Server) getProcessStats() gin.HandlerFunc {
 			return
 		}
 
-		// Implementação temporária com dados fixos - TODO: conectar DB
-		stats := gin.H{
-			"total":      45,
-			"active":     38,
-			"paused":     5,
-			"archived":   2,
-			"this_month": 12,
+		// Conectar com banco de dados para dados reais
+		db := s.db
+		if db == nil {
+			c.JSON(500, gin.H{"error": "Database connection not available"})
+			return
+		}
+
+		var stats struct {
+			Total    int `db:"total"`
+			Active   int `db:"active"`
+			Archived int `db:"archived"`
+		}
+
+		// Query para buscar estatísticas reais
+		query := `
+			SELECT 
+				COUNT(*) as total,
+				COUNT(*) FILTER (WHERE status = 'active') as active,
+				COUNT(*) FILTER (WHERE status = 'archived') as archived
+			FROM processes 
+			WHERE tenant_id = $1
+		`
+		
+		err := db.Get(&stats, query, tenantID)
+		if err != nil {
+			s.logger.Error("Erro ao buscar estatísticas", zap.Error(err))
+			c.JSON(500, gin.H{"error": "Database query failed"})
+			return
+		}
+
+		statsResponse := gin.H{
+			"total":         stats.Total,
+			"active":        stats.Active,
+			"paused":        0, // TODO: implementar status paused
+			"archived":      stats.Archived,
+			"this_month":    stats.Total, // TODO: implementar filtro por mês
+			"todayMovements":     0, // TODO: implementar
+			"upcomingDeadlines":  0, // TODO: implementar
 		}
 
 		s.logger.Info("Retornando estatísticas de processos",
@@ -174,7 +223,7 @@ func (s *Server) getProcessStats() gin.HandlerFunc {
 		)
 
 		c.JSON(200, gin.H{
-			"data": stats,
+			"data": statsResponse,
 			"timestamp": "2025-01-05T10:30:00Z",
 		})
 	}
