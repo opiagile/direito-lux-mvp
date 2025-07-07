@@ -184,17 +184,27 @@ func (s *Server) getProcessStats() gin.HandlerFunc {
 		}
 
 		var stats struct {
-			Total    int `db:"total"`
-			Active   int `db:"active"`
-			Archived int `db:"archived"`
+			Total      int `db:"total"`
+			Active     int `db:"active"`
+			Suspended  int `db:"suspended"`
+			Concluded  int `db:"concluded"`
+			Archived   int `db:"archived"`
+			ThisMonth  int `db:"this_month"`
+			ThisWeek   int `db:"this_week"`
+			RecentlyUpdated int `db:"recently_updated"`
 		}
 
-		// Query para buscar estatísticas reais
+		// Query para buscar estatísticas reais completas (usando colunas existentes)
 		query := `
 			SELECT 
 				COUNT(*) as total,
 				COUNT(*) FILTER (WHERE status = 'active') as active,
-				COUNT(*) FILTER (WHERE status = 'archived') as archived
+				COUNT(*) FILTER (WHERE status = 'suspended') as suspended,
+				COUNT(*) FILTER (WHERE status = 'concluded') as concluded,
+				COUNT(*) FILTER (WHERE status = 'archived') as archived,
+				COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE)) as this_month,
+				COUNT(*) FILTER (WHERE created_at >= date_trunc('week', CURRENT_DATE)) as this_week,
+				COUNT(*) FILTER (WHERE updated_at >= CURRENT_DATE - INTERVAL '7 days') as recently_updated
 			FROM processes 
 			WHERE tenant_id = $1
 		`
@@ -207,13 +217,15 @@ func (s *Server) getProcessStats() gin.HandlerFunc {
 		}
 
 		statsResponse := gin.H{
-			"total":         stats.Total,
-			"active":        stats.Active,
-			"paused":        0, // TODO: implementar status paused
-			"archived":      stats.Archived,
-			"this_month":    stats.Total, // TODO: implementar filtro por mês
-			"todayMovements":     0, // TODO: implementar
-			"upcomingDeadlines":  0, // TODO: implementar
+			"total":              stats.Total,
+			"active":             stats.Active,
+			"suspended":          stats.Suspended,
+			"concluded":          stats.Concluded,
+			"archived":           stats.Archived,
+			"this_month":         stats.ThisMonth,
+			"this_week":          stats.ThisWeek,
+			"recently_updated":   stats.RecentlyUpdated,
+			"upcomingDeadlines":  0, // TODO: implementar quando tivermos tabela de prazos
 		}
 
 		s.logger.Info("Retornando estatísticas de processos",
