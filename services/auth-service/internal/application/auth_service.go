@@ -15,14 +15,15 @@ import (
 
 // AuthService implementa os casos de uso de autenticação
 type AuthService struct {
-	userRepo         domain.UserRepository
-	sessionRepo      domain.SessionRepository
-	refreshTokenRepo domain.RefreshTokenRepository
-	loginAttemptRepo domain.LoginAttemptRepository
-	eventBus         events.EventBus
-	jwtSecret        string
-	jwtExpiryHours   int
-	refreshExpiryDays int
+	userRepo              domain.UserRepository
+	sessionRepo           domain.SessionRepository
+	refreshTokenRepo      domain.RefreshTokenRepository
+	loginAttemptRepo      domain.LoginAttemptRepository
+	passwordResetTokenRepo domain.PasswordResetTokenRepository
+	eventBus              events.EventBus
+	jwtSecret             string
+	jwtExpiryHours        int
+	refreshExpiryDays     int
 }
 
 // NewAuthService cria uma nova instância do serviço de autenticação
@@ -31,20 +32,22 @@ func NewAuthService(
 	sessionRepo domain.SessionRepository,
 	refreshTokenRepo domain.RefreshTokenRepository,
 	loginAttemptRepo domain.LoginAttemptRepository,
+	passwordResetTokenRepo domain.PasswordResetTokenRepository,
 	eventBus events.EventBus,
 	jwtSecret string,
 	jwtExpiryHours int,
 	refreshExpiryDays int,
 ) *AuthService {
 	return &AuthService{
-		userRepo:          userRepo,
-		sessionRepo:       sessionRepo,
-		refreshTokenRepo:  refreshTokenRepo,
-		loginAttemptRepo:  loginAttemptRepo,
-		eventBus:          eventBus,
-		jwtSecret:         jwtSecret,
-		jwtExpiryHours:    jwtExpiryHours,
-		refreshExpiryDays: refreshExpiryDays,
+		userRepo:               userRepo,
+		sessionRepo:            sessionRepo,
+		refreshTokenRepo:       refreshTokenRepo,
+		loginAttemptRepo:       loginAttemptRepo,
+		passwordResetTokenRepo: passwordResetTokenRepo,
+		eventBus:               eventBus,
+		jwtSecret:              jwtSecret,
+		jwtExpiryHours:         jwtExpiryHours,
+		refreshExpiryDays:      refreshExpiryDays,
 	}
 }
 
@@ -233,6 +236,70 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 // RefreshTokenRequest representa uma solicitação de refresh de token
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+// TenantData representa dados do tenant para registro
+type TenantData struct {
+	Name     string `json:"name" validate:"required"`
+	Document string `json:"document" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone" validate:"required"`
+	Website  string `json:"website"`
+	Plan     string `json:"plan" validate:"required"`
+	Address  struct {
+		Street       string `json:"street" validate:"required"`
+		Number       string `json:"number" validate:"required"`
+		Complement   string `json:"complement"`
+		Neighborhood string `json:"neighborhood" validate:"required"`
+		City         string `json:"city" validate:"required"`
+		State        string `json:"state" validate:"required"`
+		ZipCode      string `json:"zipCode" validate:"required"`
+	} `json:"address"`
+}
+
+// UserData representa dados do usuário para registro
+type UserData struct {
+	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+	Phone    string `json:"phone" validate:"required"`
+}
+
+// TenantDTO representa um tenant para transferência de dados
+type TenantDTO struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Document  string    `json:"document"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone"`
+	Website   string    `json:"website"`
+	Plan      string    `json:"plan"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// RegisterRequest representa uma solicitação de registro
+type RegisterRequest struct {
+	Tenant TenantData `json:"tenant" validate:"required"`
+	User   UserData   `json:"user" validate:"required"`
+}
+
+// RegisterResponse representa resposta de registro bem-sucedido
+type RegisterResponse struct {
+	Tenant TenantDTO `json:"tenant"`
+	User   UserDTO   `json:"user"`
+	Message string   `json:"message"`
+}
+
+// ForgotPasswordRequest representa solicitação de recuperação de senha
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// ResetPasswordRequest representa solicitação de reset de senha
+type ResetPasswordRequest struct {
+	Token    string `json:"token" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 // RefreshToken renova os tokens de acesso usando um refresh token
@@ -445,4 +512,195 @@ func (s *AuthService) recordLoginAttempt(email, tenantID, ipAddress, userAgent s
 	
 	// Não falhar por erro ao registrar tentativa
 	s.loginAttemptRepo.Create(attempt)
+}
+
+// Register cria novo tenant e usuário administrador
+func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
+	// Verificar se email já existe
+	existingUser, _ := s.userRepo.GetByEmail(req.User.Email)
+	if existingUser != nil {
+		return nil, fmt.Errorf("email já existe")
+	}
+	
+	// Por enquanto, criar um tenant ID simples
+	// Em produção, isso deveria integrar com o tenant-service
+	tenantID := uuid.New().String()
+	
+	// Criar usuário administrador
+	now := time.Now()
+	user := &domain.User{
+		ID:        uuid.New().String(),
+		TenantID:  tenantID,
+		Email:     req.User.Email,
+		FirstName: req.User.Name, // Usando o nome completo como firstName por simplicidade
+		LastName:  "",
+		Role:      domain.RoleAdmin,
+		Status:    domain.StatusActive,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	
+	// Validar dados do usuário
+	if err := user.ValidateEmail(); err != nil {
+		return nil, fmt.Errorf("dados inválidos")
+	}
+	
+	// Definir senha
+	if err := user.SetPassword(req.User.Password); err != nil {
+		return nil, fmt.Errorf("dados inválidos")
+	}
+	
+	// Salvar usuário
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("erro ao criar usuário: %w", err)
+	}
+	
+	// TODO: Integrar com tenant-service para criar tenant real
+	// Por enquanto, retornar dados mock do tenant
+	tenantDTO := TenantDTO{
+		ID:        tenantID,
+		Name:      req.Tenant.Name,
+		Document:  req.Tenant.Document,
+		Email:     req.Tenant.Email,
+		Phone:     req.Tenant.Phone,
+		Website:   req.Tenant.Website,
+		Plan:      req.Tenant.Plan,
+		Status:    "active",
+		CreatedAt: now,
+	}
+	
+	userDTO := UserDTO{
+		ID:        user.ID,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Role:      user.Role,
+		Status:    user.Status,
+		TenantID:  user.TenantID,
+		CreatedAt: user.CreatedAt,
+	}
+	
+	return &RegisterResponse{
+		Tenant:  tenantDTO,
+		User:    userDTO,
+		Message: "Conta criada com sucesso! Você pode fazer login agora.",
+	}, nil
+}
+
+// ForgotPassword cria token de recuperação e envia email
+func (s *AuthService) ForgotPassword(ctx context.Context, req ForgotPasswordRequest) error {
+	// Buscar usuário por email
+	user, err := s.userRepo.GetByEmail(req.Email)
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+	
+	// Verificar se usuário pode recuperar senha
+	if !user.IsActive() {
+		return fmt.Errorf("usuário inativo")
+	}
+	
+	// Gerar token de recuperação
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return fmt.Errorf("erro ao gerar token: %w", err)
+	}
+	tokenString := hex.EncodeToString(tokenBytes)
+	
+	// Criar registro do token (válido por 1 hora)
+	now := time.Now()
+	resetToken := &domain.PasswordResetToken{
+		ID:        uuid.New().String(),
+		UserID:    user.ID,
+		TenantID:  user.TenantID,
+		Token:     tokenString,
+		Email:     user.Email,
+		ExpiresAt: now.Add(1 * time.Hour),
+		IsUsed:    false,
+		CreatedAt: now,
+	}
+	
+	// Salvar token
+	if err := s.passwordResetTokenRepo.Create(resetToken); err != nil {
+		return fmt.Errorf("erro ao salvar token de recuperação: %w", err)
+	}
+	
+	// TODO: Enviar email com link de recuperação
+	// Por enquanto, apenas log que seria enviado
+	// Em produção, integrar com notification-service
+	
+	// TODO: Publish event para envio de email
+	// event := domain.PasswordResetRequestedEvent{
+	//     UserID:    user.ID,
+	//     Email:     user.Email,
+	//     Token:     tokenString,
+	//     ExpiresAt: resetToken.ExpiresAt,
+	// }
+	// s.eventBus.Publish(ctx, event)
+	
+	return nil
+}
+
+// ResetPassword valida token e redefine senha
+func (s *AuthService) ResetPassword(ctx context.Context, req ResetPasswordRequest) error {
+	// Buscar token de recuperação
+	resetToken, err := s.passwordResetTokenRepo.GetByToken(req.Token)
+	if err != nil {
+		return fmt.Errorf("token inválido")
+	}
+	
+	// Verificar se token pode ser usado
+	if !resetToken.CanUse() {
+		if resetToken.IsUsed {
+			return fmt.Errorf("token já utilizado")
+		}
+		return fmt.Errorf("token expirado")
+	}
+	
+	// Buscar usuário
+	user, err := s.userRepo.GetByID(resetToken.UserID)
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+	
+	// Verificar se usuário ainda está ativo
+	if !user.IsActive() {
+		return fmt.Errorf("usuário inativo")
+	}
+	
+	// Definir nova senha
+	if err := user.SetPassword(req.Password); err != nil {
+		return fmt.Errorf("senha inválida: %w", err)
+	}
+	
+	// Atualizar usuário
+	user.UpdatedAt = time.Now()
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("erro ao atualizar senha: %w", err)
+	}
+	
+	// Marcar token como usado
+	if err := s.passwordResetTokenRepo.MarkAsUsed(resetToken.ID); err != nil {
+		// Log do erro, mas não falhar o reset
+	}
+	
+	// Invalidar todas as sessões do usuário
+	if err := s.sessionRepo.DeleteByUserID(user.ID); err != nil {
+		// Log do erro, mas não falhar o reset
+	}
+	
+	// Invalidar todos os refresh tokens do usuário
+	if err := s.refreshTokenRepo.DeleteByUserID(user.ID); err != nil {
+		// Log do erro, mas não falhar o reset
+	}
+	
+	// TODO: Publish event de senha alterada
+	// event := domain.PasswordResetCompletedEvent{
+	//     UserID:   user.ID,
+	//     Email:    user.Email,
+	//     ResetAt:  time.Now(),
+	// }
+	// s.eventBus.Publish(ctx, event)
+	
+	return nil
 }

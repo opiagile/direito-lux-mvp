@@ -116,10 +116,16 @@ func (s *Server) setupRoutes() {
 		// Authentication routes
 		auth := api.Group("/auth")
 		{
+			// Endpoints existentes
 			auth.POST("/login", s.authHandler.Login)
 			auth.POST("/refresh", s.authHandler.RefreshToken)
 			auth.POST("/logout", s.authHandler.Logout)
 			auth.GET("/validate", s.authHandler.ValidateToken)
+			
+			// Novos endpoints
+			auth.POST("/register", s.authHandler.Register)          // Registro público
+			auth.POST("/forgot-password", s.authHandler.ForgotPassword) // Recuperação de senha
+			auth.POST("/reset-password", s.authHandler.ResetPassword)   // Reset de senha
 		}
 		
 		// User management routes

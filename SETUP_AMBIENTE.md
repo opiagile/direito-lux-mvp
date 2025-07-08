@@ -89,6 +89,12 @@ npm install
 npm run dev
 # Frontend: http://localhost:3000
 # Grafana: http://localhost:3002
+
+# ✅ NOVO: Páginas de Autenticação Completas (08/01/2025)
+# - /register - Registro público em 3 etapas (tenant → admin → plano)
+# - /forgot-password - Recuperação de senha
+# - /reset-password - Reset de senha com validação
+# - /login - Login existente atualizado
 ```
 
 ### 2. Configurar Variáveis de Ambiente
@@ -141,6 +147,10 @@ docker-compose ps
 # Ou manualmente:
 cd services/auth-service
 migrate -path migrations -database "postgres://direito_lux:direito_lux_pass_dev@localhost:5432/direito_lux_dev?sslmode=disable" up
+
+# ✅ NOVA: Migração de Password Reset Tokens (08/01/2025)
+# 004_create_password_reset_tokens_table.sql - Para recuperação de senha
+# Criada automaticamente com o sistema completo de autenticação
 ```
 
 ### 4. Popular Dados de Desenvolvimento (Automatizado)

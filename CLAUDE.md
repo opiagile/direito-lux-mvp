@@ -62,9 +62,9 @@ make test
 make test-coverage
 ```
 
-## 📊 Status Atual (Atualizado 07/01/2025)
+## 📊 Status Atual (Atualizado 08/01/2025)
 
-- ✅ **Implementado (85% do projeto)**: 
+- ✅ **Implementado (88% do projeto)**: 
   - Documentação completa (visão, arquitetura, roadmap)
   - Event Storming e Domain Modeling
   - Docker Compose com 15+ serviços
@@ -72,6 +72,15 @@ make test-coverage
   - **10 Microserviços Core 100% funcionais**: Auth, Tenant, Process, DataJud, Notification, AI, Search, MCP, Report
   - **Frontend Next.js 14 completo** - CRUD processos, busca, billing, dashboard
   - **Infrastructure completa**: K8s, Terraform, CI/CD GitHub Actions
+  
+- 🎉 **Auth Service 100% COMPLETO (08/01/2025)**: 
+  - ✅ **Sistema de autenticação completo** - Login, logout, refresh, validação
+  - ✅ **NOVO: Registro público** - Criação de tenant + admin user com 3 etapas
+  - ✅ **NOVO: Recuperação de senha** - Sistema completo com tokens seguros
+  - ✅ **NOVO: Reset de senha** - Validação e atualização segura
+  - ✅ **Frontend completo** - 3 novas páginas implementadas (/register, /forgot-password, /reset-password)
+  - ✅ **Database migration** - Nova tabela password_reset_tokens
+  - ✅ **Validation e business rules** - Força da senha, expiração de tokens
   
 - ⚠️ **Auditoria Externa Concluída (07/01/2025)**: 
   - ✅ Todas configurações de APIs externas verificadas

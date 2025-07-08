@@ -292,3 +292,181 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, user)
 }
+
+// Register godoc
+// @Summary Registro de novo usuário e tenant
+// @Description Cria novo tenant e usuário administrador (endpoint público)
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body application.RegisterRequest true "Dados de registro"
+// @Success 201 {object} application.RegisterResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/auth/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req application.RegisterRequest
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logging.LogError(c.Request.Context(), h.logger, "Erro ao fazer bind da requisição de registro", err,
+			zap.String("operation", "register"),
+		)
+		
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Dados inválidos",
+			Message: err.Error(),
+		})
+		return
+	}
+	
+	logging.LogInfo(c.Request.Context(), h.logger, "Tentativa de registro",
+		zap.String("email", req.User.Email),
+		zap.String("tenant_name", req.Tenant.Name),
+		zap.String("operation", "register"),
+	)
+	
+	// Realizar registro
+	response, err := h.authService.Register(c.Request.Context(), req)
+	if err != nil {
+		logging.LogError(c.Request.Context(), h.logger, "Erro no registro", err,
+			zap.String("email", req.User.Email),
+			zap.String("operation", "register"),
+		)
+		
+		switch err.Error() {
+		case "email já existe", "documento já existe":
+			c.JSON(http.StatusConflict, ErrorResponse{
+				Error:   "Dados já existem",
+				Message: "Email ou documento já cadastrados",
+			})
+		case "dados inválidos":
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Error:   "Dados inválidos",
+				Message: "Verifique os dados fornecidos",
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "Erro interno",
+				Message: "Erro interno do servidor",
+			})
+		}
+		return
+	}
+	
+	logging.LogInfo(c.Request.Context(), h.logger, "Registro realizado com sucesso",
+		zap.String("user_id", response.User.ID),
+		zap.String("tenant_id", response.Tenant.ID),
+		zap.String("operation", "register"),
+	)
+	
+	c.JSON(http.StatusCreated, response)
+}
+
+// ForgotPassword godoc
+// @Summary Solicitar recuperação de senha
+// @Description Envia email com link para recuperação de senha
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body application.ForgotPasswordRequest true "Email para recuperação"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req application.ForgotPasswordRequest
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Dados inválidos",
+			Message: err.Error(),
+		})
+		return
+	}
+	
+	logging.LogInfo(c.Request.Context(), h.logger, "Solicitação de recuperação de senha",
+		zap.String("email", req.Email),
+		zap.String("operation", "forgot_password"),
+	)
+	
+	err := h.authService.ForgotPassword(c.Request.Context(), req)
+	if err != nil {
+		logging.LogError(c.Request.Context(), h.logger, "Erro na recuperação de senha", err,
+			zap.String("email", req.Email),
+			zap.String("operation", "forgot_password"),
+		)
+		
+		switch err.Error() {
+		case "usuário não encontrado":
+			c.JSON(http.StatusNotFound, ErrorResponse{
+				Error:   "Usuário não encontrado",
+				Message: "Email não cadastrado no sistema",
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "Erro interno",
+				Message: "Erro interno do servidor",
+			})
+		}
+		return
+	}
+	
+	c.JSON(http.StatusOK, MessageResponse{
+		Message: "Se o email existir, você receberá instruções para recuperação da senha",
+	})
+}
+
+// ResetPassword godoc
+// @Summary Resetar senha com token
+// @Description Redefine senha do usuário usando token de recuperação
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body application.ResetPasswordRequest true "Token e nova senha"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req application.ResetPasswordRequest
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error:   "Dados inválidos",
+			Message: err.Error(),
+		})
+		return
+	}
+	
+	logging.LogInfo(c.Request.Context(), h.logger, "Tentativa de reset de senha",
+		zap.String("operation", "reset_password"),
+	)
+	
+	err := h.authService.ResetPassword(c.Request.Context(), req)
+	if err != nil {
+		logging.LogError(c.Request.Context(), h.logger, "Erro no reset de senha", err,
+			zap.String("operation", "reset_password"),
+		)
+		
+		switch err.Error() {
+		case "token inválido", "token expirado", "token já utilizado":
+			c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Error:   "Token inválido",
+				Message: "Token de recuperação inválido ou expirado",
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error:   "Erro interno",
+				Message: "Erro interno do servidor",
+			})
+		}
+		return
+	}
+	
+	c.JSON(http.StatusOK, MessageResponse{
+		Message: "Senha alterada com sucesso",
+	})
+}

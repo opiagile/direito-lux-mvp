@@ -73,16 +73,41 @@ type LoginAttemptRepository interface {
 	GetRecentFailures(email string, minutes int) (int, error)
 }
 
+// PasswordResetToken representa um token de recuperação de senha
+type PasswordResetToken struct {
+	ID        string    `json:"id" db:"id"`
+	UserID    string    `json:"user_id" db:"user_id"`
+	TenantID  string    `json:"tenant_id" db:"tenant_id"`
+	Token     string    `json:"token" db:"token"`
+	Email     string    `json:"email" db:"email"`
+	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	IsUsed    bool      `json:"is_used" db:"is_used"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UsedAt    *time.Time `json:"used_at" db:"used_at"`
+}
+
+// PasswordResetTokenRepository define interface para tokens de recuperação de senha
+type PasswordResetTokenRepository interface {
+	Create(token *PasswordResetToken) error
+	GetByToken(token string) (*PasswordResetToken, error)
+	MarkAsUsed(id string) error
+	DeleteExpired() error
+	DeleteByUserID(userID string) error
+}
+
 // Validação de domínio
 
 var (
-	ErrInvalidEmail    = errors.New("email inválido")
-	ErrWeakPassword    = errors.New("senha muito fraca")
-	ErrInvalidRole     = errors.New("papel de usuário inválido")
-	ErrInvalidStatus   = errors.New("status de usuário inválido")
-	ErrUserNotFound    = errors.New("usuário não encontrado")
-	ErrEmailExists     = errors.New("email já está em uso")
-	ErrTooManyFailures = errors.New("muitas tentativas de login falharam")
+	ErrInvalidEmail         = errors.New("email inválido")
+	ErrWeakPassword         = errors.New("senha muito fraca")
+	ErrInvalidRole          = errors.New("papel de usuário inválido")
+	ErrInvalidStatus        = errors.New("status de usuário inválido")
+	ErrUserNotFound         = errors.New("usuário não encontrado")
+	ErrEmailExists          = errors.New("email já está em uso")
+	ErrTooManyFailures      = errors.New("muitas tentativas de login falharam")
+	ErrPasswordResetTokenNotFound = errors.New("token de recuperação não encontrado")
+	ErrPasswordResetTokenExpired  = errors.New("token de recuperação expirado")
+	ErrPasswordResetTokenUsed     = errors.New("token de recuperação já foi utilizado")
 )
 
 // ValidateEmail valida se o email está em formato válido
@@ -205,4 +230,21 @@ func (u *User) HasPermission(requiredRole UserRole) bool {
 	requiredLevel := roleHierarchy[requiredRole]
 	
 	return userLevel >= requiredLevel
+}
+
+// IsExpired verifica se o token de recuperação de senha expirou
+func (prt *PasswordResetToken) IsExpired() bool {
+	return time.Now().After(prt.ExpiresAt)
+}
+
+// CanUse verifica se o token de recuperação pode ser usado
+func (prt *PasswordResetToken) CanUse() bool {
+	return !prt.IsUsed && !prt.IsExpired()
+}
+
+// MarkUsed marca o token de recuperação como usado
+func (prt *PasswordResetToken) MarkUsed() {
+	prt.IsUsed = true
+	now := time.Now()
+	prt.UsedAt = &now
 }

@@ -132,6 +132,10 @@ func main() {
 				database.NewLoginAttemptRepository,
 				fx.As(new(domain.LoginAttemptRepository)),
 			),
+			fx.Annotate(
+				database.NewPasswordResetTokenRepository,
+				fx.As(new(domain.PasswordResetTokenRepository)),
+			),
 		),
 		
 		// Services with configuration injection
@@ -141,6 +145,7 @@ func main() {
 				sessionRepo domain.SessionRepository,
 				refreshTokenRepo domain.RefreshTokenRepository,
 				loginAttemptRepo domain.LoginAttemptRepository,
+				passwordResetTokenRepo domain.PasswordResetTokenRepository,
 				eventBus events.EventBus,
 				cfg *config.Config,
 			) *application.AuthService {
@@ -149,6 +154,7 @@ func main() {
 					sessionRepo,
 					refreshTokenRepo,
 					loginAttemptRepo,
+					passwordResetTokenRepo,
 					eventBus,
 					cfg.JWT.Secret,
 					cfg.JWT.ExpiryHours,

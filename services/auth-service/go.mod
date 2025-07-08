@@ -12,7 +12,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.17.0
-	github.com/streadway/amqp v1.1.0
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	go.uber.org/fx v1.20.1
 	go.uber.org/zap v1.26.0
