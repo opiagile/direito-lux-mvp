@@ -66,7 +66,7 @@ class DocumentGenerationRequest(BaseModel):
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     print(f"🚀 Starting {config.SERVICE_NAME} v{config.VERSION}")
-    print(f"🔧 Environment: {config.environment}")
+    print(f"🔧 Environment: {config.ENVIRONMENT}")
     print(f"⚡ Mode: Local Development (Heavy AI → GCP)")
     
     yield

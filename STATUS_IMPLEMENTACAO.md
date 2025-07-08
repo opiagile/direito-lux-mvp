@@ -892,3 +892,117 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 - ✅ **Kubernetes Production** - Manifests completos para staging e production
 - ✅ **Terraform IaC** - Infrastructure as Code completa para GCP
 - ✅ **Infraestrutura Cloud-Native** - VPC, GKE, Cloud SQL, Redis, Load Balancers, SSL
+
+## 🔍 AUDITORIA DE CONFIGURAÇÕES EXTERNAS (07/01/2025)
+
+### ✅ AUDITORIA COMPLETA REALIZADA
+
+**📊 Status da Verificação de Serviços Externos:**
+
+| Serviço | APIs Externas | Status Configuração | Pronto para Produção |
+|---------|---------------|-------------------|---------------------|
+| **AI Service** | OpenAI, HuggingFace | ✅ Demo keys configuradas | ⚠️ Chaves reais necessárias |
+| **DataJud Service** | CNJ DataJud API | ✅ Demo keys + **❌ Mock implementation** | ❌ **Implementação real obrigatória** |
+| **Notification Service** | WhatsApp, Telegram, SMTP | ✅ Demo tokens + MailHog local | ⚠️ APIs reais necessárias |
+| **Search Service** | Elasticsearch (interno) | ✅ Configurado | ✅ Pronto |
+| **MCP Service** | Claude, WhatsApp, Telegram | ✅ Demo tokens | ⚠️ Chaves reais necessárias |
+
+### 🚨 DESCOBERTAS CRÍTICAS
+
+#### **1. DataJud Service - IMPLEMENTAÇÃO MOCK** 
+```go
+// PROBLEMA CRÍTICO IDENTIFICADO em datajud_service.go:456-469
+func (s *DataJudService) executeHTTPRequest(...) (*domain.DataJudResponse, error) {
+    // ❌ Esta implementação seria feita na camada de infraestrutura
+    // ❌ Aqui é apenas um placeholder
+    return &domain.DataJudResponse{
+        StatusCode: 200,
+        Body:       []byte(`{"status": "success"}`), // ❌ FAKE!
+        Duration:   2000, // ❌ FAKE!
+    }, nil
+}
+```
+
+**Falta implementar para PRODUÇÃO:**
+- ✅ Certificado digital A1/A3 do CNPJ
+- ✅ Client TLS com mutual authentication
+- ✅ HTTP Client real para `https://api-publica.datajud.cnj.jus.br`
+- ✅ Rate limiting real (10k requests/dia)
+- ✅ Timeout handling e retry logic
+- ✅ Parse real do JSON response
+
+#### **2. Configurações Demo vs Produção**
+
+**DEV (Funcionais para desenvolvimento):**
+```bash
+# AI Service
+OPENAI_API_KEY=demo_key                    # ❌ Fallback sempre ativo
+HUGGINGFACE_TOKEN=demo_token              # ❌ Opcional
+
+# DataJud Service  
+DATAJUD_API_KEY=demo_key                  # ❌ Stats mockados
+# FALTA: Certificado digital obrigatório
+
+# Notification Service
+WHATSAPP_ACCESS_TOKEN=mock_whatsapp_token # ❌ Não envia real
+TELEGRAM_BOT_TOKEN=mock_telegram_token    # ❌ Não envia real
+SMTP_HOST=mailhog                         # ❌ Local only
+
+# MCP Service (não no docker-compose.yml)
+ANTHROPIC_API_KEY=sk-ant-api03-test-key   # ❌ Demo
+```
+
+**PROD (Configurações necessárias):**
+```bash
+# Chaves reais obrigatórias
+OPENAI_API_KEY=sk-real-key-xxx
+DATAJUD_API_KEY=real_cnj_key
+DATAJUD_CERTIFICATE_PATH=/certs/cnpj.p12  # ❌ OBRIGATÓRIO
+DATAJUD_CERTIFICATE_PASSWORD=xxx          # ❌ OBRIGATÓRIO
+WHATSAPP_ACCESS_TOKEN=real_meta_token
+TELEGRAM_BOT_TOKEN=real_bot_token
+ANTHROPIC_API_KEY=sk-ant-real-key
+```
+
+### ⚠️ **RISCOS IDENTIFICADOS PARA PRODUÇÃO**
+
+#### **Alto Risco:**
+- ❌ **DataJud**: Implementação completamente mock - **APP NÃO FUNCIONARÁ**
+- ⚠️ **WhatsApp**: Requer Meta Business verification + webhooks HTTPS
+- ⚠️ **Telegram**: Requer bot verificado + webhook SSL
+
+#### **Médio Risco:**  
+- ⚠️ **OpenAI**: Rate limits reais, quotas, custos por token
+- ⚠️ **Email**: SPF/DKIM records, reputação do domínio
+
+#### **Baixo Risco:**
+- ✅ **Search/Elasticsearch**: Funcional (apenas auth prod necessária)
+
+### 🎯 **PRÓXIMOS PASSOS OBRIGATÓRIOS**
+
+#### **1. Criar Ambiente STAGING (CRÍTICO)**
+- ⚠️ Substituir implementação mock DataJud por HTTP client real
+- ⚠️ Configurar certificado digital CNJ para testes  
+- ⚠️ APIs reais com quotas limitadas para validação
+- ⚠️ Testes de integração com dados reais
+
+#### **2. Implementações Obrigatórias:**
+- ❌ **DataJud HTTP Client** - Implementação real da API CNJ
+- ❌ **Webhook URLs** - HTTPS público para WhatsApp/Telegram
+- ❌ **Certificate Management** - A1/A3 para autenticação CNJ
+- ❌ **Rate Limiting Real** - Quotas e limites por API
+
+### 📋 **STATUS ATUALIZADO**
+
+**Ambiente atual (DEV):**
+- ✅ **Funcional para desenvolvimento** - UI/UX, fluxos de negócio
+- ✅ **Validação de arquitetura** - Microserviços comunicando
+- ❌ **NÃO garante funcionamento em produção** - APIs mock
+
+**Próximo marco:**
+- 🎯 **Ambiente STAGING** - APIs reais, certificados, configurações prod
+- 🎯 **Validação E2E** - Fluxo completo com dados reais
+- 🎯 **Deploy gradual** - Blue/Green com rollback preparado
+
+**Estimativa para Staging:** 2-3 dias (implementação DataJud + configurações)
+**Estimativa para Produção:** +1 semana (certificações e homologação)

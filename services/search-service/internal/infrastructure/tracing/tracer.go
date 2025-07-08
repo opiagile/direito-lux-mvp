@@ -5,6 +5,8 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
+	
+	"github.com/direito-lux/search-service/internal/infrastructure/config"
 )
 
 // Tracer wraps Jaeger tracer
@@ -15,7 +17,7 @@ type Tracer struct {
 }
 
 // NewTracer creates a new Jaeger tracer
-func NewTracer(cfg interface{}, logger *zap.Logger) (*Tracer, error) {
+func NewTracer(cfg *config.Config, logger *zap.Logger) (*Tracer, error) {
 	// Simple no-op tracer for now
 	tracer := opentracing.NoopTracer{}
 	

@@ -32,7 +32,13 @@ RUN if [ -f go.mod ]; then go mod download; fi
 # Criar usuário de desenvolvimento
 RUN addgroup -g 1000 appgroup && \
     adduser -D -s /bin/sh -u 1000 -G appgroup appuser && \
-    chown -R appuser:appgroup /app
+    chown -R appuser:appgroup /app && \
+    mkdir -p /go/pkg && \
+    chown -R appuser:appgroup /go
+
+# Configurar cache do Go para o usuário
+ENV GOPATH=/go
+ENV GOCACHE=/tmp/go-cache
 
 # Definir usuário
 USER appuser

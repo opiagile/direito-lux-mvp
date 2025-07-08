@@ -62,19 +62,31 @@ make test
 make test-coverage
 ```
 
-## 📊 Status Atual
+## 📊 Status Atual (Atualizado 07/01/2025)
 
-- ✅ **Implementado**: 
+- ✅ **Implementado (85% do projeto)**: 
   - Documentação completa (visão, arquitetura, roadmap)
   - Event Storming e Domain Modeling
   - Docker Compose com 15+ serviços
   - Template de microserviço Go
-  - Auth Service completo (JWT, multi-tenant, CRUD)
+  - **10 Microserviços Core 100% funcionais**: Auth, Tenant, Process, DataJud, Notification, AI, Search, MCP, Report
+  - **Frontend Next.js 14 completo** - CRUD processos, busca, billing, dashboard
+  - **Infrastructure completa**: K8s, Terraform, CI/CD GitHub Actions
   
-- 🚧 **Em Desenvolvimento**: Tenant Service
-- ⏳ **Próximos**: Process Service, DataJud Service, Notification Service
+- ⚠️ **Auditoria Externa Concluída (07/01/2025)**: 
+  - ✅ Todas configurações de APIs externas verificadas
+  - ❌ **DataJud Service identificado como MOCK** - precisa implementação real
+  - ⚠️ Todas as chaves configuradas para DEV (demo/mock tokens)
+  - ✅ Ambiente funcional para desenvolvimento e testes de arquitetura
+  
+- 🎯 **Próximo Marco Crítico: AMBIENTE STAGING**
+  - ❌ **DataJud HTTP Client real** - substituir mock por implementação CNJ
+  - ⚠️ **APIs reais com quotas limitadas** - OpenAI, WhatsApp, Telegram, CNJ  
+  - ⚠️ **Certificado digital A1/A3** para autenticação CNJ obrigatória
+  - ⚠️ **Webhooks HTTPS** para WhatsApp e Telegram
+  - ✅ **Validação E2E com dados reais** antes da produção
 
-**Progresso Total**: ~25% completo
+**Progresso Total**: ~85% completo (desenvolvimento), próximo: STAGING (2-3 dias)
 
 ## 🔗 Documentação Principal
 
@@ -90,6 +102,49 @@ Consultar sempre:
 3. **Implementar health checks e métricas em todos os serviços**
 4. **Seguir padrão de multi-tenancy com header X-Tenant-ID**
 5. **Todos os serviços devem ter Dockerfile e docker-compose entry**
+
+## 🚨 LIÇÕES APRENDIDAS - AUDITORIA EXTERNA (07/01/2025)
+
+### ⚠️ **CONFIGURAÇÕES DEV ≠ PROD**
+
+**❌ Riscos Identificados:**
+- **DataJud Service tem implementação MOCK** - não funciona em produção
+- **APIs externas usam tokens demo** - WhatsApp, Telegram, OpenAI
+- **Ambiente DEV não garante funcionamento em PROD**
+
+### 🔧 **PREPARAÇÃO PARA STAGING**
+
+**Configurações obrigatórias para ambiente staging:**
+
+```bash
+# Chaves reais (desenvolvimento limitado)
+OPENAI_API_KEY=sk-real-but-limited-key
+DATAJUD_API_KEY=real_cnj_staging_key
+DATAJUD_CERTIFICATE_PATH=/certs/staging.p12
+DATAJUD_CERTIFICATE_PASSWORD=staging_cert_password
+WHATSAPP_ACCESS_TOKEN=staging_meta_token
+TELEGRAM_BOT_TOKEN=staging_bot_token
+ANTHROPIC_API_KEY=sk-ant-staging-key
+
+# URLs públicas obrigatórias
+WHATSAPP_WEBHOOK_URL=https://staging.direitolux.com.br/webhook/whatsapp
+TELEGRAM_WEBHOOK_URL=https://staging.direitolux.com.br/webhook/telegram
+```
+
+### 📋 **PROCESSO STAGING**
+
+1. **Implementar DataJud HTTP Client real** (substitui mock)
+2. **Configurar certificado digital CNJ**
+3. **Criar webhooks HTTPS públicos**
+4. **Configurar APIs reais com quotas limitadas**
+5. **Testes E2E com dados reais**
+6. **Validação completa antes de produção**
+
+### 🎯 **PRÓXIMAS SESSÕES**
+
+- **Prioridade 1**: Implementar DataJud HTTP Client real
+- **Prioridade 2**: Configurar ambiente staging com APIs reais
+- **Prioridade 3**: Testes de integração E2E com dados reais
 
 ## 🎯 Diferenciais do Produto
 
@@ -130,19 +185,26 @@ Consultar sempre:
 - **CI/CD**: GitHub Actions + ArgoCD
 - **Observability**: Jaeger + Prometheus + Grafana
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura do Projeto (Atualizada)
 
 ```
 direito-lux/
-├── services/               # Microserviços
-│   ├── auth-service/      ✅ Implementado
-│   ├── tenant-service/    🚧 Em desenvolvimento
-│   ├── process-service/   ⏳ Próximo
-│   └── ...
-├── template-service/      ✅ Template base
-├── infrastructure/        # IaC e K8s
-├── scripts/              # Scripts úteis
-└── docs/                 # Documentação
+├── services/               # Microserviços (100% Implementados)
+│   ├── auth-service/      ✅ Funcional (JWT, multi-tenant)
+│   ├── tenant-service/    ✅ Funcional (planos, quotas)
+│   ├── process-service/   ✅ Funcional (CQRS, CRUD)
+│   ├── datajud-service/   ⚠️ Mock (precisa HTTP client real)
+│   ├── notification-service/ ✅ Funcional (WhatsApp, email)
+│   ├── ai-service/        ✅ Funcional (Python/FastAPI)
+│   ├── search-service/    ✅ Funcional (Elasticsearch)
+│   ├── mcp-service/       ✅ Funcional (Claude MCP)
+│   └── report-service/    ✅ Funcional (dashboard, PDF)
+├── template-service/      ✅ Template base Go
+├── frontend/              ✅ Next.js 14 completo (CRUD, busca)
+├── infrastructure/        ✅ K8s + Terraform completos
+├── scripts/              ✅ Deploy e utilities
+├── docs/                 ✅ Documentação completa
+└── .github/workflows/    ✅ CI/CD GitHub Actions
 ```
 
 ## 🛠️ Ferramentas de Desenvolvimento
