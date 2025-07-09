@@ -68,8 +68,6 @@ func Recovery(logger *zap.Logger) gin.HandlerFunc {
 // CORS middleware para configuração de CORS
 func CORS(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		
 		// Configurar headers CORS
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")

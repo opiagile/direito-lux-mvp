@@ -8,13 +8,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/direito-lux/notification-service/internal/application/services"
+	"github.com/direito-lux/notification-service/internal/domain"
 	"github.com/direito-lux/notification-service/internal/infrastructure/config"
 	"github.com/direito-lux/notification-service/internal/infrastructure/database"
 	"github.com/direito-lux/notification-service/internal/infrastructure/events"
 	"github.com/direito-lux/notification-service/internal/infrastructure/http"
 	"github.com/direito-lux/notification-service/internal/infrastructure/logging"
 	"github.com/direito-lux/notification-service/internal/infrastructure/metrics"
+	"github.com/direito-lux/notification-service/internal/infrastructure/repository"
 	"github.com/direito-lux/notification-service/internal/infrastructure/tracing"
+
+	"github.com/jmoiron/sqlx"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -75,8 +80,25 @@ func main() {
 		fx.Provide(
 			tracing.NewTracer,
 			metrics.NewMetrics,
+			provideDatabaseConfig,
 			database.NewConnection,
+			provideDatabaseConnection,
 			events.NewEventBus,
+		),
+
+		// Repositories
+		fx.Provide(
+			repository.NewPostgresNotificationRepository,
+			repository.NewPostgresTemplateRepository,
+			repository.NewPostgresPreferenceRepository,
+		),
+
+		// Application Services
+		fx.Provide(
+			services.NewNotificationService,
+			services.NewTemplateService,
+			provideNotificationProviders,
+			provideNotificationQueue,
 		),
 
 		// HTTP Server
@@ -110,6 +132,30 @@ func main() {
 	}
 
 	logger.Info("notificationservice Service parado com sucesso")
+}
+
+// provideDatabaseConfig provides *config.DatabaseConfig from main config
+func provideDatabaseConfig(cfg *config.Config) *config.DatabaseConfig {
+	return &cfg.Database
+}
+
+// provideDatabaseConnection provides *sqlx.DB from database connection
+func provideDatabaseConnection(conn *database.Connection) *sqlx.DB {
+	return conn.GetDB()
+}
+
+// provideNotificationProviders provides notification providers map
+func provideNotificationProviders() map[domain.NotificationChannel]domain.NotificationProvider {
+	// Mock providers for now - will be replaced with real implementations
+	return map[domain.NotificationChannel]domain.NotificationProvider{
+		// Will be implemented with real providers
+	}
+}
+
+// provideNotificationQueue provides notification queue
+func provideNotificationQueue() domain.NotificationQueue {
+	// Mock queue for now - will be replaced with real implementation
+	return nil
 }
 
 // registerHooks registra hooks do ciclo de vida da aplicação

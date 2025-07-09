@@ -123,12 +123,6 @@ func (eb *EventBus) publishLocal(ctx context.Context, eventType string, event in
 
 // publishRemote publica evento via RabbitMQ
 func (eb *EventBus) publishRemote(ctx context.Context, eventType string, event interface{}) error {
-	// Serializar evento
-	data, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("erro ao serializar evento: %w", err)
-	}
-	
 	// Criar envelope do evento
 	envelope := map[string]interface{}{
 		"type":      eventType,

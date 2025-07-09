@@ -9,19 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/direito-lux/notification-service/internal/application/services"
+	"github.com/direito-lux/notification-service/internal/domain"
 	"github.com/direito-lux/notification-service/internal/infrastructure/config"
-	"github.com/direito-lux/notification-service/internal/infrastructure/http/handlers"
 	"github.com/direito-lux/notification-service/internal/infrastructure/http/middleware"
 	"github.com/direito-lux/notification-service/internal/infrastructure/metrics"
 )
 
 // Server representa o servidor HTTP
 type Server struct {
-	httpServer *http.Server
-	gin        *gin.Engine
-	logger     *zap.Logger
-	config     *config.Config
-	metrics    *metrics.Metrics
+	httpServer          *http.Server
+	gin                 *gin.Engine
+	logger              *zap.Logger
+	config              *config.Config
+	metrics             *metrics.Metrics
+	notificationService *services.NotificationService
+	templateService     *services.TemplateService
+	preferenceRepo      domain.NotificationPreferenceRepository
 }
 
 // NewServer cria novo servidor HTTP
@@ -29,6 +33,9 @@ func NewServer(
 	cfg *config.Config,
 	logger *zap.Logger,
 	metrics *metrics.Metrics,
+	notificationService *services.NotificationService,
+	templateService *services.TemplateService,
+	preferenceRepo domain.NotificationPreferenceRepository,
 ) *Server {
 	// Configurar Gin baseado no ambiente
 	if cfg.IsProduction() {
@@ -45,10 +52,13 @@ func NewServer(
 
 	// Criar servidor
 	server := &Server{
-		gin:     r,
-		logger:  logger,
-		config:  cfg,
-		metrics: metrics,
+		gin:                 r,
+		logger:              logger,
+		config:              cfg,
+		metrics:             metrics,
+		notificationService: notificationService,
+		templateService:     templateService,
+		preferenceRepo:      preferenceRepo,
 	}
 
 	// Configurar rotas
@@ -68,23 +78,15 @@ func NewServer(
 
 // setupRoutes configura as rotas da API
 func (s *Server) setupRoutes() {
-	// Health checks
-	health := handlers.NewHealthHandler()
-	s.gin.GET("/health", health.Health)
-	s.gin.GET("/ready", health.Ready)
-
-	// API versioning
-	v1 := s.gin.Group("/api/v1")
-	{
-		// Rotas de notificações serão adicionadas aqui
-		// Placeholder para futuras rotas
-		v1.GET("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Notification Service is running",
-				"version": s.config.Version,
-			})
-		})
+	// Setup comprehensive routes using routes.go
+	routerConfig := &RouterConfig{
+		NotificationService: s.notificationService,
+		TemplateService:     s.templateService,
+		PreferenceRepo:      s.preferenceRepo,
+		Logger:              s.logger,
 	}
+	
+	SetupRoutes(s.gin, routerConfig)
 }
 
 // Start inicia o servidor HTTP

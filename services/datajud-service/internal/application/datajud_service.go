@@ -9,6 +9,16 @@ import (
 	"github.com/direito-lux/datajud-service/internal/domain"
 )
 
+// HTTPClient interface para cliente HTTP (permite mock e real)
+type HTTPClient interface {
+	QueryProcess(ctx context.Context, req *domain.DataJudRequest, provider *domain.CNPJProvider) (*domain.DataJudResponse, error)
+	QueryMovements(ctx context.Context, req *domain.DataJudRequest, provider *domain.CNPJProvider) (*domain.DataJudResponse, error)
+	QueryParties(ctx context.Context, req *domain.DataJudRequest, provider *domain.CNPJProvider) (*domain.DataJudResponse, error)
+	BulkQuery(ctx context.Context, req *domain.DataJudRequest, provider *domain.CNPJProvider) (*domain.DataJudResponse, error)
+	TestConnection(ctx context.Context) error
+	Close() error
+}
+
 // DataJudService serviço principal para consultas DataJud
 type DataJudService struct {
 	repos           *domain.Repositories
@@ -18,6 +28,7 @@ type DataJudService struct {
 	cacheManager    *CacheManager
 	domainService   domain.DomainService
 	config          domain.DataJudConfig
+	httpClient      HTTPClient // Interface para o cliente HTTP
 }
 
 // NewDataJudService cria nova instância do serviço
@@ -29,6 +40,7 @@ func NewDataJudService(
 	cacheManager *CacheManager,
 	domainService domain.DomainService,
 	config domain.DataJudConfig,
+	httpClient HTTPClient,
 ) *DataJudService {
 	return &DataJudService{
 		repos:            repos,
@@ -38,6 +50,7 @@ func NewDataJudService(
 		cacheManager:     cacheManager,
 		domainService:    domainService,
 		config:           config,
+		httpClient:       httpClient,
 	}
 }
 
@@ -452,19 +465,19 @@ func (s *DataJudService) calculateRetryDelay(retryCount int) time.Duration {
 	return exponentialDelay
 }
 
-// executeHTTPRequest executa a requisição HTTP real (seria implementado na infraestrutura)
+// executeHTTPRequest executa a requisição HTTP real usando o cliente configurado
 func (s *DataJudService) executeHTTPRequest(ctx context.Context, req *domain.DataJudRequest, provider *domain.CNPJProvider) (*domain.DataJudResponse, error) {
-	// Esta implementação seria feita na camada de infraestrutura
-	// Aqui é apenas um placeholder
-	return &domain.DataJudResponse{
-		ID:         uuid.New(),
-		RequestID:  req.ID,
-		StatusCode: 200,
-		Headers:    make(map[string]string),
-		Body:       []byte(`{"status": "success"}`),
-		Size:       100,
-		Duration:   2000, // 2 segundos
-		FromCache:  false,
-		ReceivedAt: time.Now(),
-	}, nil
+	// Usar o cliente HTTP baseado no tipo de requisição
+	switch req.Type {
+	case domain.RequestTypeProcess:
+		return s.httpClient.QueryProcess(ctx, req, provider)
+	case domain.RequestTypeMovement:
+		return s.httpClient.QueryMovements(ctx, req, provider)
+	case domain.RequestTypeParties:
+		return s.httpClient.QueryParties(ctx, req, provider)
+	case domain.RequestTypeBulk:
+		return s.httpClient.BulkQuery(ctx, req, provider)
+	default:
+		return nil, fmt.Errorf("tipo de requisição não suportado: %s", req.Type)
+	}
 }

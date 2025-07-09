@@ -16,6 +16,7 @@ const (
 	RequestTypeProcess   RequestType = "process"    // Consulta de processo
 	RequestTypeMovement  RequestType = "movement"   // Consulta de movimentações
 	RequestTypeParty     RequestType = "party"      // Consulta de partes
+	RequestTypeParties   RequestType = "party"      // Alias para backward compatibility
 	RequestTypeDocument  RequestType = "document"   // Consulta de documentos
 	RequestTypeBulk      RequestType = "bulk"       // Consulta em lote
 )
@@ -100,6 +101,7 @@ type DataJudResponse struct {
 	ProcessData   *ProcessResponseData   `json:"process_data,omitempty"`
 	MovementData  *MovementResponseData  `json:"movement_data,omitempty"`
 	PartyData     *PartyResponseData     `json:"party_data,omitempty"`
+	BulkData      *BulkResponseData      `json:"bulk_data,omitempty"`
 }
 
 // ProcessResponseData dados estruturados de processo
@@ -318,4 +320,37 @@ func (r *DataJudRequest) GetEstimatedDuration() time.Duration {
 	default:
 		return 5 * time.Second
 	}
+}
+
+// BulkResponseData dados de resposta para consulta em lote
+type BulkResponseData struct {
+	Total     int                   `json:"total"`
+	Found     int                   `json:"found"`
+	NotFound  int                   `json:"not_found"`
+	Processes []*BulkProcessResult  `json:"processes"`
+}
+
+// BulkProcessResult resultado individual de consulta em lote
+type BulkProcessResult struct {
+	Index         int          `json:"index"`
+	ProcessNumber string       `json:"process_number"`
+	Found         bool         `json:"found"`
+	Process       *ProcessInfo `json:"process,omitempty"`
+}
+
+// ProcessInfo informações do processo (legacy support)
+type ProcessInfo struct {
+	Number          string     `json:"number"`
+	Class           string     `json:"class"`
+	Subject         string     `json:"subject"`
+	Court           string     `json:"court"`
+	Instance        string     `json:"instance"`
+	Status          string     `json:"status"`
+	Judge           string     `json:"judge"`
+	StartDate       *time.Time `json:"start_date"`
+	LastUpdate      *time.Time `json:"last_update"`
+	Value           float64    `json:"value"`
+	SecretLevel     string     `json:"secret_level"`
+	Priority        string     `json:"priority"`
+	ElectronicJudge bool       `json:"electronic_judge"`
 }

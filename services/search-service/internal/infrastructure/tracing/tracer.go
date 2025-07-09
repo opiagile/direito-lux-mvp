@@ -16,8 +16,8 @@ type Tracer struct {
 	logger *zap.Logger
 }
 
-// NewTracer creates a new Jaeger tracer
-func NewTracer(cfg *config.Config, logger *zap.Logger) (*Tracer, error) {
+// createTracer creates a new Jaeger tracer (renamed to avoid Fx auto-detection)
+func createTracer(cfg *config.Config, logger *zap.Logger) (*Tracer, error) {
 	// Simple no-op tracer for now
 	tracer := opentracing.NoopTracer{}
 	
@@ -27,6 +27,7 @@ func NewTracer(cfg *config.Config, logger *zap.Logger) (*Tracer, error) {
 		logger: logger,
 	}, nil
 }
+
 
 // GetTracer returns the OpenTracing tracer
 func (t *Tracer) GetTracer() opentracing.Tracer {

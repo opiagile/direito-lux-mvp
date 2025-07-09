@@ -35,8 +35,9 @@ func NewRabbitMQConnection(
 	logger *zap.Logger,
 	metrics *metrics.Metrics,
 ) (*RabbitMQConnection, error) {
-	if !cfg.RabbitMQ.Enabled {
-		logger.Info("RabbitMQ desabilitado")
+	// RabbitMQ sempre habilitado se URL fornecida
+	if cfg.RabbitMQ.URL == "" {
+		logger.Info("RabbitMQ URL não configurada, desabilitando")
 		return &RabbitMQConnection{
 			config:   cfg,
 			logger:   logger,
@@ -72,9 +73,7 @@ func NewRabbitMQConnection(
 	go rabbitmq.monitorConnection()
 
 	logger.Info("Conexão com RabbitMQ estabelecida",
-		zap.String("host", cfg.RabbitMQ.Host),
-		zap.Int("port", cfg.RabbitMQ.Port),
-		zap.String("vhost", cfg.RabbitMQ.VHost),
+		zap.String("url", cfg.RabbitMQ.URL),
 	)
 
 	return rabbitmq, nil
@@ -82,15 +81,7 @@ func NewRabbitMQConnection(
 
 // connect estabelece conexão com RabbitMQ
 func (r *RabbitMQConnection) connect() error {
-	dsn := fmt.Sprintf("amqp://%s:%s@%s:%d%s",
-		r.config.RabbitMQ.Username,
-		r.config.RabbitMQ.Password,
-		r.config.RabbitMQ.Host,
-		r.config.RabbitMQ.Port,
-		r.config.RabbitMQ.VHost,
-	)
-
-	conn, err := amqp.Dial(dsn)
+	conn, err := amqp.Dial(r.config.RabbitMQ.URL)
 	if err != nil {
 		return fmt.Errorf("erro ao conectar: %w", err)
 	}

@@ -201,7 +201,7 @@ func (rm *RateLimitManager) ResetAllCNPJUsage(ctx context.Context) error {
 	defer rm.mu.Unlock()
 
 	resetCount := 0
-	for key, limiter := range rm.limiters {
+	for _, limiter := range rm.limiters {
 		if limiter.Type == domain.RateLimitCNPJ {
 			limiter.Reset()
 			rm.repos.RateLimiter.Update(limiter)

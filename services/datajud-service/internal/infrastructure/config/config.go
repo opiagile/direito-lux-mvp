@@ -36,6 +36,9 @@ type Config struct {
 
 	// External Services
 	Services ExternalServicesConfig
+	
+	// DataJud API
+	DataJud DataJudConfig
 }
 
 // DatabaseConfig configuração do banco de dados
@@ -135,6 +138,68 @@ type ExternalServicesConfig struct {
 	CircuitBreakerFailureThreshold uint32       `envconfig:"CIRCUIT_BREAKER_FAILURE_THRESHOLD" default:"5"`
 }
 
+// DataJudConfig configuração da API DataJud CNJ
+type DataJudConfig struct {
+	// URL base da API pública
+	BaseURL string `envconfig:"DATAJUD_BASE_URL" default:"https://api-publica.datajud.cnj.jus.br"`
+	
+	// Chave de API pública do CNJ
+	APIKey string `envconfig:"DATAJUD_API_KEY" required:"true"`
+	
+	// Timeouts
+	Timeout        time.Duration `envconfig:"DATAJUD_TIMEOUT" default:"30s"`
+	ReadTimeout    time.Duration `envconfig:"DATAJUD_READ_TIMEOUT" default:"25s"`
+	WriteTimeout   time.Duration `envconfig:"DATAJUD_WRITE_TIMEOUT" default:"25s"`
+	IdleTimeout    time.Duration `envconfig:"DATAJUD_IDLE_TIMEOUT" default:"90s"`
+	
+	// Retry configuration
+	RetryCount    int           `envconfig:"DATAJUD_RETRY_COUNT" default:"3"`
+	RetryDelay    time.Duration `envconfig:"DATAJUD_RETRY_DELAY" default:"1s"`
+	MaxRetryDelay time.Duration `envconfig:"DATAJUD_MAX_RETRY_DELAY" default:"30s"`
+	
+	// Rate limiting
+	RateLimitEnabled    bool          `envconfig:"DATAJUD_RATE_LIMIT_ENABLED" default:"true"`
+	RateLimitRPM        int           `envconfig:"DATAJUD_RATE_LIMIT_RPM" default:"100"`
+	RateLimitBurst      int           `envconfig:"DATAJUD_RATE_LIMIT_BURST" default:"10"`
+	RateLimitWindow     time.Duration `envconfig:"DATAJUD_RATE_LIMIT_WINDOW" default:"1m"`
+	
+	// Circuit breaker
+	CircuitBreakerEnabled         bool          `envconfig:"DATAJUD_CIRCUIT_BREAKER_ENABLED" default:"true"`
+	CircuitBreakerMaxRequests     uint32        `envconfig:"DATAJUD_CIRCUIT_BREAKER_MAX_REQUESTS" default:"3"`
+	CircuitBreakerInterval        time.Duration `envconfig:"DATAJUD_CIRCUIT_BREAKER_INTERVAL" default:"60s"`
+	CircuitBreakerTimeout         time.Duration `envconfig:"DATAJUD_CIRCUIT_BREAKER_TIMEOUT" default:"30s"`
+	CircuitBreakerFailureThreshold uint32       `envconfig:"DATAJUD_CIRCUIT_BREAKER_FAILURE_THRESHOLD" default:"5"`
+	
+	// Cache
+	CacheEnabled      bool          `envconfig:"DATAJUD_CACHE_ENABLED" default:"true"`
+	CacheDefaultTTL   time.Duration `envconfig:"DATAJUD_CACHE_DEFAULT_TTL" default:"1h"`
+	CacheProcessTTL   time.Duration `envconfig:"DATAJUD_CACHE_PROCESS_TTL" default:"24h"`
+	CacheMovementTTL  time.Duration `envconfig:"DATAJUD_CACHE_MOVEMENT_TTL" default:"30m"`
+	CacheMaxSize      int           `envconfig:"DATAJUD_CACHE_MAX_SIZE" default:"10000"`
+	CacheMaxMemory    int64         `envconfig:"DATAJUD_CACHE_MAX_MEMORY" default:"104857600"` // 100MB
+	
+	// Pool de CNPJs (legacy, será removido)
+	CNPJPoolEnabled   bool   `envconfig:"DATAJUD_CNPJ_POOL_ENABLED" default:"false"`
+	CNPJPoolSize      int    `envconfig:"DATAJUD_CNPJ_POOL_SIZE" default:"1"`
+	CNPJPoolStrategy  string `envconfig:"DATAJUD_CNPJ_POOL_STRATEGY" default:"round_robin"`
+	
+	// Monitoring
+	MetricsEnabled       bool   `envconfig:"DATAJUD_METRICS_ENABLED" default:"true"`
+	LogRequestsEnabled   bool   `envconfig:"DATAJUD_LOG_REQUESTS_ENABLED" default:"false"`
+	LogResponsesEnabled  bool   `envconfig:"DATAJUD_LOG_RESPONSES_ENABLED" default:"false"`
+	
+	// Elasticsearch optimization
+	ESScrollSize      int           `envconfig:"DATAJUD_ES_SCROLL_SIZE" default:"1000"`
+	ESScrollTimeout   time.Duration `envconfig:"DATAJUD_ES_SCROLL_TIMEOUT" default:"5m"`
+	ESMaxResultWindow int           `envconfig:"DATAJUD_ES_MAX_RESULT_WINDOW" default:"10000"`
+	
+	// User agent
+	UserAgent string `envconfig:"DATAJUD_USER_AGENT" default:"Direito-Lux/1.0"`
+	
+	// Fallback para mock em desenvolvimento
+	MockEnabled bool `envconfig:"DATAJUD_MOCK_ENABLED" default:"false"`
+}
+
 // Load carrega configurações das variáveis de ambiente
 func Load() (*Config, error) {
 	var cfg Config
@@ -184,6 +249,11 @@ func (c *Config) validate() error {
 		return fmt.Errorf("environment inválido: %s", c.Environment)
 	}
 
+	// Validar configurações do DataJud
+	if err := c.ValidateDataJudConfig(); err != nil {
+		return fmt.Errorf("erro na configuração DataJud: %w", err)
+	}
+
 	return nil
 }
 
@@ -213,4 +283,143 @@ func (c *Config) GetDatabaseDSN() string {
 // GetRedisAddr retorna o endereço do Redis
 func (c *Config) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port)
+}
+
+// ValidateDataJudConfig valida configurações específicas do DataJud
+func (c *Config) ValidateDataJudConfig() error {
+	// Validar API Key
+	if c.DataJud.APIKey == "" {
+		return fmt.Errorf("DATAJUD_API_KEY é obrigatória")
+	}
+	
+	// Validar URL base
+	if c.DataJud.BaseURL == "" {
+		return fmt.Errorf("DATAJUD_BASE_URL é obrigatória")
+	}
+	
+	// Validar timeouts
+	if c.DataJud.Timeout <= 0 {
+		return fmt.Errorf("DATAJUD_TIMEOUT deve ser maior que 0")
+	}
+	
+	if c.DataJud.RetryCount < 0 {
+		return fmt.Errorf("DATAJUD_RETRY_COUNT deve ser maior ou igual a 0")
+	}
+	
+	if c.DataJud.RetryCount > 10 {
+		return fmt.Errorf("DATAJUD_RETRY_COUNT não deve ser maior que 10")
+	}
+	
+	// Validar rate limiting
+	if c.DataJud.RateLimitEnabled {
+		if c.DataJud.RateLimitRPM <= 0 {
+			return fmt.Errorf("DATAJUD_RATE_LIMIT_RPM deve ser maior que 0")
+		}
+		
+		if c.DataJud.RateLimitBurst <= 0 {
+			return fmt.Errorf("DATAJUD_RATE_LIMIT_BURST deve ser maior que 0")
+		}
+	}
+	
+	// Validar cache
+	if c.DataJud.CacheEnabled {
+		if c.DataJud.CacheMaxSize <= 0 {
+			return fmt.Errorf("DATAJUD_CACHE_MAX_SIZE deve ser maior que 0")
+		}
+		
+		if c.DataJud.CacheMaxMemory <= 0 {
+			return fmt.Errorf("DATAJUD_CACHE_MAX_MEMORY deve ser maior que 0")
+		}
+	}
+	
+	return nil
+}
+
+// IsDataJudMockEnabled verifica se está usando mock
+func (c *Config) IsDataJudMockEnabled() bool {
+	return c.DataJud.MockEnabled || c.IsDevelopment()
+}
+
+// GetDataJudClientConfig retorna configuração do cliente DataJud
+func (c *Config) GetDataJudClientConfig() DataJudClientConfig {
+	return DataJudClientConfig{
+		BaseURL:    c.DataJud.BaseURL,
+		APIKey:     c.DataJud.APIKey,
+		Timeout:    c.DataJud.Timeout,
+		RetryCount: c.DataJud.RetryCount,
+		RetryDelay: c.DataJud.RetryDelay,
+		UserAgent:  c.DataJud.UserAgent,
+		MockEnabled: c.IsDataJudMockEnabled(),
+	}
+}
+
+// DataJudClientConfig configuração simplificada para o cliente
+type DataJudClientConfig struct {
+	BaseURL     string
+	APIKey      string
+	Timeout     time.Duration
+	RetryCount  int
+	RetryDelay  time.Duration
+	UserAgent   string
+	MockEnabled bool
+}
+
+// GetDataJudRateLimitConfig retorna configuração de rate limiting
+func (c *Config) GetDataJudRateLimitConfig() DataJudRateLimitConfig {
+	return DataJudRateLimitConfig{
+		Enabled:    c.DataJud.RateLimitEnabled,
+		RPM:        c.DataJud.RateLimitRPM,
+		Burst:      c.DataJud.RateLimitBurst,
+		Window:     c.DataJud.RateLimitWindow,
+	}
+}
+
+// DataJudRateLimitConfig configuração de rate limiting
+type DataJudRateLimitConfig struct {
+	Enabled bool
+	RPM     int
+	Burst   int
+	Window  time.Duration
+}
+
+// GetDataJudCacheConfig retorna configuração de cache
+func (c *Config) GetDataJudCacheConfig() DataJudCacheConfig {
+	return DataJudCacheConfig{
+		Enabled:     c.DataJud.CacheEnabled,
+		DefaultTTL:  c.DataJud.CacheDefaultTTL,
+		ProcessTTL:  c.DataJud.CacheProcessTTL,
+		MovementTTL: c.DataJud.CacheMovementTTL,
+		MaxSize:     c.DataJud.CacheMaxSize,
+		MaxMemory:   c.DataJud.CacheMaxMemory,
+	}
+}
+
+// DataJudCacheConfig configuração de cache
+type DataJudCacheConfig struct {
+	Enabled     bool
+	DefaultTTL  time.Duration
+	ProcessTTL  time.Duration
+	MovementTTL time.Duration
+	MaxSize     int
+	MaxMemory   int64
+}
+
+// GetDataJudCircuitBreakerConfig retorna configuração de circuit breaker
+func (c *Config) GetDataJudCircuitBreakerConfig() DataJudCircuitBreakerConfig {
+	return DataJudCircuitBreakerConfig{
+		Enabled:          c.DataJud.CircuitBreakerEnabled,
+		MaxRequests:      c.DataJud.CircuitBreakerMaxRequests,
+		Interval:         c.DataJud.CircuitBreakerInterval,
+		Timeout:          c.DataJud.CircuitBreakerTimeout,
+		FailureThreshold: c.DataJud.CircuitBreakerFailureThreshold,
+	}
+}
+
+// DataJudCircuitBreakerConfig configuração de circuit breaker
+type DataJudCircuitBreakerConfig struct {
+	Enabled          bool
+	MaxRequests      uint32
+	Interval         time.Duration
+	Timeout          time.Duration
+	FailureThreshold uint32
 }

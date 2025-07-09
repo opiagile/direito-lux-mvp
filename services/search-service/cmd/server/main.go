@@ -14,7 +14,6 @@ import (
 	"github.com/direito-lux/search-service/internal/infrastructure/http"
 	"github.com/direito-lux/search-service/internal/infrastructure/logging"
 	"github.com/direito-lux/search-service/internal/infrastructure/metrics"
-	"github.com/direito-lux/search-service/internal/infrastructure/tracing"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -73,7 +72,6 @@ func main() {
 		
 		// Infraestrutura
 		fx.Provide(
-			tracing.NewTracer,
 			metrics.NewMetrics,
 			database.NewConnection,
 			events.NewEventBus,
@@ -118,7 +116,6 @@ func registerHooks(
 	logger *zap.Logger,
 	server *http.Server,
 	metrics *metrics.Metrics,
-	tracer *tracing.Tracer,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -140,11 +137,6 @@ func registerHooks(
 			if err := server.Shutdown(ctx); err != nil {
 				logger.Error("Erro ao parar servidor HTTP", zap.Error(err))
 				return err
-			}
-
-			// Fechar tracer
-			if err := tracer.Close(); err != nil {
-				logger.Error("Erro ao fechar tracer", zap.Error(err))
 			}
 
 			return nil
