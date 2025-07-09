@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/direito-lux/datajud-service/internal/domain"
 )
 
 // Config estrutura de configuração do serviço
@@ -159,7 +160,7 @@ type DataJudConfig struct {
 	
 	// Rate limiting
 	RateLimitEnabled    bool          `envconfig:"DATAJUD_RATE_LIMIT_ENABLED" default:"true"`
-	RateLimitRPM        int           `envconfig:"DATAJUD_RATE_LIMIT_RPM" default:"100"`
+	RateLimitRPM        int           `envconfig:"DATAJUD_RATE_LIMIT_RPM" default:"120"`
 	RateLimitBurst      int           `envconfig:"DATAJUD_RATE_LIMIT_BURST" default:"10"`
 	RateLimitWindow     time.Duration `envconfig:"DATAJUD_RATE_LIMIT_WINDOW" default:"1m"`
 	
@@ -337,7 +338,7 @@ func (c *Config) ValidateDataJudConfig() error {
 
 // IsDataJudMockEnabled verifica se está usando mock
 func (c *Config) IsDataJudMockEnabled() bool {
-	return c.DataJud.MockEnabled || c.IsDevelopment()
+	return c.DataJud.MockEnabled
 }
 
 // GetDataJudClientConfig retorna configuração do cliente DataJud
@@ -415,6 +416,29 @@ func (c *Config) GetDataJudCircuitBreakerConfig() DataJudCircuitBreakerConfig {
 	}
 }
 
+// GetDataJudDomainConfig retorna configuração para o domínio DataJud
+func (c *Config) GetDataJudDomainConfig() domain.DataJudConfig {
+	return domain.DataJudConfig{
+		APIBaseURL:           c.DataJud.BaseURL,
+		APITimeout:           c.DataJud.Timeout,
+		APIRetryCount:        c.DataJud.RetryCount,
+		APIRetryDelay:        c.DataJud.RetryDelay,
+		DefaultDailyLimit:    10000, // Limite padrão CNJ
+		GlobalRateLimit:      c.DataJud.RateLimitRPM,
+		RateWindowSize:       c.DataJud.RateLimitWindow,
+		DefaultCacheTTL:      int(c.DataJud.CacheDefaultTTL.Seconds()),
+		MaxCacheSize:         c.DataJud.CacheMaxMemory,
+		MaxCacheEntries:      int64(c.DataJud.CacheMaxSize),
+		CacheCleanupInterval: 5 * time.Minute,
+		CBFailureThreshold:   int(c.DataJud.CircuitBreakerFailureThreshold),
+		CBSuccessThreshold:   3,
+		CBTimeout:            c.DataJud.CircuitBreakerTimeout,
+		CBMaxRequests:        int(c.DataJud.CircuitBreakerMaxRequests),
+		DefaultPoolStrategy:  domain.StrategyRoundRobin,
+		MetricsEnabled:       c.DataJud.MetricsEnabled,
+	}
+}
+
 // DataJudCircuitBreakerConfig configuração de circuit breaker
 type DataJudCircuitBreakerConfig struct {
 	Enabled          bool
@@ -423,3 +447,4 @@ type DataJudCircuitBreakerConfig struct {
 	Timeout          time.Duration
 	FailureThreshold uint32
 }
+

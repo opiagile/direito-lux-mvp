@@ -314,9 +314,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=dev_redis_123
       - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
-      - DATAJUD_API_URL=https://api-publica.datajud.cnj.jus.br
-      - DATAJUD_API_KEY=${DATAJUD_API_KEY:-demo_key}
-      - RATE_LIMIT_DAILY=10000
+      - DATAJUD_BASE_URL=https://api-publica.datajud.cnj.jus.br
+      - DATAJUD_API_KEY=cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==
+      - DATAJUD_MOCK_ENABLED=false
+      - DATAJUD_RATE_LIMIT_RPM=120
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - LOG_LEVEL=debug
       - PORT=8080

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,14 +12,21 @@ import (
 	"github.com/direito-lux/datajud-service/internal/infrastructure/config"
 )
 
+// DataJudServiceInterface interface comum para ambos os services
+type DataJudServiceInterface interface {
+	QueryProcess(ctx context.Context, req *application.ProcessQueryRequest) (*application.ProcessQueryResponse, error)
+	QueryMovements(ctx context.Context, req *application.MovementQueryRequest) (*application.MovementQueryResponse, error)
+	BulkQuery(ctx context.Context, req *application.BulkQueryRequest) (*application.BulkQueryResponse, error)
+}
+
 // DataJudHandler handler HTTP para o serviço DataJud
 type DataJudHandler struct {
-	service *application.DataJudService
+	service DataJudServiceInterface
 	config  *config.Config
 }
 
 // NewDataJudHandler cria nova instância do handler
-func NewDataJudHandler(service *application.DataJudService, config *config.Config) *DataJudHandler {
+func NewDataJudHandler(service DataJudServiceInterface, config *config.Config) *DataJudHandler {
 	return &DataJudHandler{
 		service: service,
 		config:  config,

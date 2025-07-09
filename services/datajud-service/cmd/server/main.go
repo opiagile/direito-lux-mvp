@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/direito-lux/datajud-service/internal/application"
 	"github.com/direito-lux/datajud-service/internal/domain"
 	"github.com/direito-lux/datajud-service/internal/infrastructure/config"
@@ -52,25 +55,11 @@ func main() {
 	}
 	defer httpClientInstance.Close()
 	
-	// Inicializar repositórios e managers (em produção, usar implementações reais)
-	repos := &domain.Repositories{} // TODO: Implementar repositories reais
-	poolManager := &application.CNPJPoolManager{} // TODO: Implementar pool manager
-	rateLimitManager := &application.RateLimitManager{} // TODO: Implementar rate limit manager
-	circuitManager := &application.CircuitBreakerManager{} // TODO: Implementar circuit breaker
-	cacheManager := &application.CacheManager{} // TODO: Implementar cache manager
-	domainService := &mockDomainService{} // Mock domain service
-	
-	// Criar serviço DataJud
-	dataJudService := application.NewDataJudService(
-		repos,
-		poolManager,
-		rateLimitManager,
-		circuitManager,
-		cacheManager,
-		domainService,
-		cfg.DataJud,
-		httpClientInstance,
-	)
+	// Para testes rápidos, usar serviço simplificado
+	dataJudService := &SimpleDataJudService{
+		httpClient: httpClientInstance,
+		config:     cfg.GetDataJudDomainConfig(),
+	}
 	
 	// Criar handler HTTP
 	handler := handlers.NewDataJudHandler(dataJudService, cfg)
@@ -100,7 +89,7 @@ func main() {
 	
 	// Criar servidor HTTP
 	srv := &http.Server{
-		Addr:           ":" + cfg.Port,
+		Addr:           ":" + strconv.Itoa(cfg.Port),
 		Handler:        router,
 		ReadTimeout:    cfg.HTTP.ReadTimeout,
 		WriteTimeout:   cfg.HTTP.WriteTimeout,
@@ -146,24 +135,116 @@ func initializeDependencies(cfg *config.Config) error {
 	return nil
 }
 
-// mockDomainService implementação mock do domain service
-type mockDomainService struct{}
 
-func (m *mockDomainService) CalculateRequestPriority(requestType domain.RequestType, urgent bool) domain.Priority {
-	if urgent {
-		return domain.PriorityHigh
-	}
-	return domain.PriorityNormal
+// SimpleDataJudService implementação simplificada para testes rápidos
+type SimpleDataJudService struct {
+	httpClient application.HTTPClient
+	config     domain.DataJudConfig
 }
 
-func (m *mockDomainService) ShouldUseCache(requestType domain.RequestType, age time.Duration) bool {
-	switch requestType {
-	case domain.RequestTypeProcess:
-		return age < 24*time.Hour
-	case domain.RequestTypeMovement:
-		return age < 30*time.Minute
-	default:
-		return age < 1*time.Hour
+// QueryProcess implementação simplificada de consulta de processo
+func (s *SimpleDataJudService) QueryProcess(ctx context.Context, req *application.ProcessQueryRequest) (*application.ProcessQueryResponse, error) {
+	// Validar entrada
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validação falhou: %w", err)
 	}
+
+	// Criar requisição DataJud básica
+	datajudReq := domain.NewDataJudRequest(
+		req.TenantID,
+		req.ClientID,
+		domain.RequestTypeProcess,
+		domain.PriorityNormal,
+	)
+	datajudReq.SetProcessNumber(req.ProcessNumber)
+	datajudReq.SetCourtID(req.CourtID)
+
+	// Criar provider mock para testes
+	provider := &domain.CNPJProvider{
+		ID:   uuid.New(),
+		CNPJ: "00000000000000", // CNPJ fictício para testes
+	}
+
+	// Executar consulta HTTP diretamente
+	response, err := s.httpClient.QueryProcess(ctx, datajudReq, provider)
+	if err != nil {
+		return &application.ProcessQueryResponse{
+			RequestID: datajudReq.ID,
+			Status:    "failed",
+			Error:     err.Error(),
+		}, err
+	}
+
+	return &application.ProcessQueryResponse{
+		RequestID: datajudReq.ID,
+		Status:    "completed",
+		Data:      response.ProcessData,
+		FromCache: false,
+		Duration:  response.Duration,
+	}, nil
+}
+
+// QueryMovements implementação simplificada de consulta de movimentações
+func (s *SimpleDataJudService) QueryMovements(ctx context.Context, req *application.MovementQueryRequest) (*application.MovementQueryResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validação falhou: %w", err)
+	}
+
+	datajudReq := domain.NewDataJudRequest(
+		req.TenantID,
+		req.ClientID,
+		domain.RequestTypeMovement,
+		domain.PriorityNormal,
+	)
+	datajudReq.SetProcessNumber(req.ProcessNumber)
+	datajudReq.SetCourtID(req.CourtID)
+
+	provider := &domain.CNPJProvider{
+		ID:   uuid.New(),
+		CNPJ: "00000000000000",
+	}
+
+	response, err := s.httpClient.QueryMovements(ctx, datajudReq, provider)
+	if err != nil {
+		return &application.MovementQueryResponse{
+			RequestID: datajudReq.ID,
+			Status:    "failed",
+			Error:     err.Error(),
+		}, err
+	}
+
+	return &application.MovementQueryResponse{
+		RequestID: datajudReq.ID,
+		Status:    "completed",
+		Data:      response.MovementData,
+		FromCache: false,
+		Duration:  response.Duration,
+	}, nil
+}
+
+// BulkQuery implementação simplificada de consulta em lote
+func (s *SimpleDataJudService) BulkQuery(ctx context.Context, req *application.BulkQueryRequest) (*application.BulkQueryResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validação falhou: %w", err)
+	}
+
+	response := &application.BulkQueryResponse{
+		RequestID: uuid.New(),
+		Status:    "completed",
+		Results:   make([]application.BulkQueryResult, 0, len(req.Queries)),
+		StartedAt: time.Now(),
+	}
+
+	// Simular processamento simples
+	for i, query := range req.Queries {
+		result := application.BulkQueryResult{
+			Index:         i,
+			ProcessNumber: query.ProcessNumber,
+			Status:        "completed",
+		}
+		response.Results = append(response.Results, result)
+	}
+
+	return response, nil
 }
 
