@@ -422,6 +422,20 @@ services:
       - direito-lux-network
     restart: unless-stopped
 
+  # Ollama - Local AI Model Server
+  ollama:
+    image: ollama/ollama:latest
+    container_name: direito-lux-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - direito-lux-network
+    restart: unless-stopped
+
   # AI Service (Python)
   ai-service:
     build:
@@ -439,6 +453,11 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=dev_redis_123
       - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
+      # Ollama configuration (local AI - STAGING ready)
+      - AI_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2:3b
+      # OpenAI fallback (if needed)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-demo_key}
       - OPENAI_MODEL=gpt-3.5-turbo
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-demo_token}
@@ -453,6 +472,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      ollama:
+        condition: service_started
     volumes:
       - ./services/ai-service:/app
       - ai_models:/app/models
@@ -693,6 +714,7 @@ volumes:
   pgadmin_data:
   elasticsearch_data:
   ai_models:
+  ollama_data:
 
 networks:
   direito-lux-network:

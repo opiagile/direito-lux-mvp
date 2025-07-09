@@ -20,6 +20,13 @@ except ImportError:
     openai = None
     OpenAI = None
 
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+    httpx = None
+
 from app.core.config import settings
 from app.core.exceptions import EmbeddingError
 from app.core.logging import get_logger
@@ -64,6 +71,65 @@ class EmbeddingService:
             self._openai_client = OpenAI(api_key=settings.openai_api_key)
         return self._openai_client
     
+    async def _get_ollama_embedding(self, text: str, model: str = None) -> List[float]:
+        """Get embedding from Ollama."""
+        if not HTTPX_AVAILABLE:
+            raise EmbeddingError("httpx not available for Ollama")
+        
+        if not model:
+            model = settings.ollama_embeddings_model
+            
+        url = f"{settings.ollama_base_url}/api/embeddings"
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url,
+                    json={
+                        "model": model,
+                        "prompt": text
+                    },
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("embedding", [])
+            except Exception as e:
+                logger.error(f"Ollama embedding failed: {str(e)}")
+                raise EmbeddingError(f"Ollama embedding failed: {str(e)}")
+    
+    async def _get_ollama_text_completion(self, prompt: str, model: str = None) -> str:
+        """Get text completion from Ollama."""
+        if not HTTPX_AVAILABLE:
+            raise EmbeddingError("httpx not available for Ollama")
+        
+        if not model:
+            model = settings.ollama_model
+            
+        url = f"{settings.ollama_base_url}/api/generate"
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url,
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": settings.ollama_temperature,
+                            "num_predict": settings.ollama_max_tokens
+                        }
+                    },
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("response", "")
+            except Exception as e:
+                logger.error(f"Ollama text completion failed: {str(e)}")
+                raise EmbeddingError(f"Ollama text completion failed: {str(e)}")
+    
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -76,17 +142,18 @@ class EmbeddingService:
     ) -> List[float]:
         """Generate embedding for a single text."""
         try:
-            # Use default model if not specified
-            if not model_name:
-                model_name = settings.huggingface_model_name
-            
             # Preprocess text if requested
             if preprocess:
                 text = self.text_processor.clean_legal_text(text)
             
-            # Generate embedding based on model type
-            if model_name.startswith("text-embedding-"):
-                # OpenAI embeddings
+            # Generate embedding based on AI provider configuration
+            if settings.ai_provider == "ollama":
+                # Use Ollama for embeddings
+                embedding = await self._get_ollama_embedding(text, model_name)
+            elif settings.ai_provider == "openai":
+                # Use OpenAI embeddings
+                if not model_name:
+                    model_name = settings.openai_embeddings_model
                 client = self._get_openai_client()
                 response = await client.embeddings.create(
                     model=model_name,
@@ -94,11 +161,13 @@ class EmbeddingService:
                 )
                 embedding = response.data[0].embedding
             else:
-                # Local models (sentence-transformers)
+                # Default to local models (sentence-transformers)
+                if not model_name:
+                    model_name = settings.huggingface_model_name
                 model = self._get_model(model_name)
                 embedding = model.encode(text, convert_to_numpy=True).tolist()
             
-            logger.debug(f"Generated embedding with dimension: {len(embedding)}")
+            logger.debug(f"Generated embedding with dimension: {len(embedding)} using {settings.ai_provider}")
             return embedding
             
         except Exception as e:

@@ -39,8 +39,18 @@ class Settings(BaseSettings):
     rabbitmq_exchange: str = Field(default="direito_lux.events", env="RABBITMQ_EXCHANGE")
     rabbitmq_queue: str = Field(default="ai-service.events", env="RABBITMQ_QUEUE")
     
-    # OpenAI
-    openai_api_key: str = Field(env="OPENAI_API_KEY")
+    # AI Provider Configuration
+    ai_provider: str = Field(default="ollama", env="AI_PROVIDER")  # ollama, openai, huggingface
+    
+    # Ollama Configuration (Local AI - STAGING ready)
+    ollama_base_url: str = Field(default="http://ollama:11434", env="OLLAMA_BASE_URL")
+    ollama_model: str = Field(default="llama3.2:3b", env="OLLAMA_MODEL")
+    ollama_embeddings_model: str = Field(default="nomic-embed-text", env="OLLAMA_EMBEDDINGS_MODEL")
+    ollama_max_tokens: int = Field(default=2000, env="OLLAMA_MAX_TOKENS")
+    ollama_temperature: float = Field(default=0.7, env="OLLAMA_TEMPERATURE")
+    
+    # OpenAI (Fallback)
+    openai_api_key: Optional[str] = Field(default="demo_key", env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-3.5-turbo", env="OPENAI_MODEL")
     openai_embeddings_model: str = Field(default="text-embedding-ada-002", env="OPENAI_EMBEDDINGS_MODEL")
     openai_max_tokens: int = Field(default=2000, env="OPENAI_MAX_TOKENS")
