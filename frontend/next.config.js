@@ -25,7 +25,7 @@ const nextConfig = {
   swcMinify: true,
   // Optimizations to prevent ChunkLoadError
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Disabled - causing critters MODULE_NOT_FOUND
   },
   webpack: (config, { dev, isServer }) => {
     // Optimize chunk splitting for better loading
