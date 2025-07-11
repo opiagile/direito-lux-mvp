@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"github.com/direito-lux/datajud-service/internal/domain"
 )
 

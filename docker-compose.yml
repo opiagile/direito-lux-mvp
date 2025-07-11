@@ -603,6 +603,59 @@ services:
       - direito-lux-network
     restart: unless-stopped
 
+  # Billing Service
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile.dev
+    container_name: direito-lux-billing
+    environment:
+      - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=direito_lux_dev
+      - DB_USER=direito_lux
+      - DB_PASSWORD=dev_password_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=dev_redis_123
+      - RABBITMQ_URL=amqp://direito_lux:dev_rabbit_123@rabbitmq:5672/direito_lux
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - TENANT_SERVICE_URL=http://tenant-service:8080
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - LOG_LEVEL=debug
+      # ASAAS Configuration
+      - ASAAS_API_KEY=demo_key
+      - ASAAS_ENVIRONMENT=sandbox
+      - ASAAS_WEBHOOK_URL=https://locking-model-sports-anti.trycloudflare.com/billing/webhooks/asaas
+      # NOWPayments Configuration
+      - NOWPAYMENTS_API_KEY=demo_key
+      - NOWPAYMENTS_WEBHOOK_URL=https://locking-model-sports-anti.trycloudflare.com/billing/webhooks/crypto
+      # NF-e Configuration (Curitiba)
+      - NFE_MUNICIPALITY=Curitiba
+      - NFE_STATE=PR
+      - NFE_COMPANY_NAME=Sua Empresa LTDA
+      - NFE_COMPANY_CNPJ=12345678000190
+    ports:
+      - "8089:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      tenant-service:
+        condition: service_started
+    volumes:
+      - ./services/billing-service:/app
+      - /app/vendor
+    networks:
+      - direito-lux-network
+    restart: unless-stopped
+
   # Frontend Web Application (Next.js)
   frontend:
     build:
@@ -620,6 +673,7 @@ services:
       - DATAJUD_SERVICE_URL=http://localhost:8084
       - TENANT_SERVICE_URL=http://localhost:8082
       - MCP_SERVICE_URL=http://localhost:8088
+      - BILLING_SERVICE_URL=http://localhost:8089
       - NEXTAUTH_URL=http://localhost:3001
       - NEXTAUTH_SECRET=direito-lux-dev-secret-key-2025
     ports:
@@ -634,6 +688,7 @@ services:
       - search-service
       - report-service
       - mcp-service
+      - billing-service
     volumes:
       - ./frontend:/app
       - /app/node_modules

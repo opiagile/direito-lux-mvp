@@ -61,6 +61,9 @@ func handleAdvancedSearch(params map[string]interface{}) (interface{}, error) {
 		indices = val
 	}
 	
+	// Usar indices na busca
+	_ = indices
+	
 	// TODO: Implementar integração real com Search Service
 	
 	result := map[string]interface{}{

@@ -106,6 +106,8 @@ type DataJudResponse struct {
 
 // ProcessResponseData dados estruturados de processo
 type ProcessResponseData struct {
+	Found       bool                   `json:"found"`
+	Process     *ProcessInfo           `json:"process,omitempty"`
 	Number      string                 `json:"number"`
 	Title       string                 `json:"title"`
 	Subject     map[string]interface{} `json:"subject"`

@@ -387,12 +387,21 @@ type TelegramMessage struct {
 	ReplyMarkup  interface{} `json:"reply_markup,omitempty"`
 }
 
+// TelegramSentMessage mensagem enviada (resposta da API)
+type TelegramSentMessage struct {
+	MessageID int                `json:"message_id"`
+	From      *TelegramUser      `json:"from,omitempty"`
+	Chat      *TelegramChat      `json:"chat"`
+	Date      int64              `json:"date"`
+	Text      string             `json:"text,omitempty"`
+}
+
 // TelegramResponse resposta da API
 type TelegramResponse struct {
-	OK          bool             `json:"ok"`
-	Result      *TelegramMessage `json:"result,omitempty"`
-	ErrorCode   int              `json:"error_code,omitempty"`
-	Description string           `json:"description,omitempty"`
+	OK          bool                  `json:"ok"`
+	Result      *TelegramSentMessage  `json:"result,omitempty"`
+	ErrorCode   int                   `json:"error_code,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 // TelegramUpdate update do webhook

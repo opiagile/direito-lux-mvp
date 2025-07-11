@@ -42,27 +42,43 @@ func NewToolService(
 // ListAvailableTools lista ferramentas disponíveis
 func (s *ToolService) ListAvailableTools(ctx context.Context, tenantID string) (*dto.ListToolsResponse, error) {
 	// Obter ferramentas do registry
-	tools := s.toolRegistry.GetAvailableTools(tenantID)
+	tools := s.toolRegistry.GetAllTools()
 	
 	// Mapear para DTOs
 	toolDTOs := make([]dto.ToolDefinition, 0, len(tools))
 	categories := make(map[string]bool)
 	
 	for _, tool := range tools {
+		// Mapear parâmetros
+		properties := make(map[string]dto.ParameterProperty)
+		required := make([]string, 0)
+		
+		for _, param := range tool.Parameters {
+			properties[param.Name] = dto.ParameterProperty{
+				Type:        param.Type,
+				Description: param.Description,
+				Enum:        param.Enum,
+				Default:     param.Default,
+			}
+			if param.Required {
+				required = append(required, param.Name)
+			}
+		}
+		
 		toolDTO := dto.ToolDefinition{
 			Name:        tool.Name,
 			Description: tool.Description,
 			Category:    tool.Category,
 			Parameters: dto.ToolParameterSchema{
 				Type:       "object",
-				Properties: s.mapParameters(tool.Parameters),
-				Required:   tool.Required,
+				Properties: properties,
+				Required:   required,
 			},
-			Permissions: tool.Permissions,
-			QuotaCost:   tool.QuotaCost,
-			Timeout:     tool.Timeout,
-			Async:       tool.Async,
-			Examples:    s.mapExamples(tool.Examples),
+			Permissions: []string{}, // TODO: implementar sistema de permissões
+			QuotaCost:   1, // Valor padrão
+			Timeout:     30 * time.Second, // Valor padrão
+			Async:       false, // Valor padrão
+			Examples:    []dto.ToolExample{}, // TODO: implementar exemplos
 		}
 		
 		toolDTOs = append(toolDTOs, toolDTO)
@@ -93,36 +109,42 @@ func (s *ToolService) ExecuteTool(ctx context.Context, req dto.ExecuteToolReques
 	// TODO: Integrar com SessionService para validar sessão
 	
 	// Obter ferramenta do registry
-	tool := s.toolRegistry.GetTool(req.ToolName)
-	if tool == nil {
+	tool, err := s.toolRegistry.GetTool(req.ToolName)
+	if err != nil {
 		return nil, fmt.Errorf("ferramenta não encontrada: %s", req.ToolName)
 	}
 	
-	// Criar execução
-	executionID := uuid.New().String()
-	execution := &domain.ToolExecution{
-		ID:         executionID,
-		SessionID:  req.SessionID,
-		ToolName:   req.ToolName,
-		Status:     "pending",
-		Parameters: req.Parameters,
-		StartedAt:  time.Now(),
-		Metadata:   req.Metadata,
+	// Converter SessionID string para UUID
+	sessionID, err := uuid.Parse(req.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+	
+	// Criar execução usando o construtor do domain
+	execution := domain.NewToolExecution(sessionID, req.ToolName, req.Parameters)
+	if req.Metadata != nil {
+		for key, value := range req.Metadata {
+			execution.SetMetadata(key, value)
+		}
 	}
 	
 	// Salvar execução
+	executionID := execution.ID.String()
 	s.executions[executionID] = execution
 	
 	// Publicar evento de início
 	event := domain.ToolEvent{
-		Type:        "tool_execution_started",
-		ExecutionID: executionID,
-		SessionID:   req.SessionID,
-		ToolName:    req.ToolName,
-		Timestamp:   time.Now(),
+		Type:      "tool_execution_started",
+		SessionID: req.SessionID,
+		ToolName:  req.ToolName,
+		UserID:    "", // TODO: obter do contexto da sessão
+		TenantID:  "", // TODO: obter do contexto da sessão
+		Timestamp: time.Now(),
+		Success:   false, // Ainda não executado
 		Data: map[string]interface{}{
-			"parameters": req.Parameters,
-			"async":      req.Async,
+			"execution_id": executionID,
+			"parameters":   req.Parameters,
+			"async":        req.Async,
 		},
 	}
 	
@@ -157,7 +179,7 @@ func (s *ToolService) ListToolExecutions(ctx context.Context, sessionID string, 
 	// Filtrar execuções por sessão
 	filteredExecutions := make([]*domain.ToolExecution, 0)
 	for _, execution := range s.executions {
-		if sessionID == "" || execution.SessionID == sessionID {
+		if sessionID == "" || execution.SessionID.String() == sessionID {
 			filteredExecutions = append(filteredExecutions, execution)
 		}
 	}
@@ -212,15 +234,18 @@ func (s *ToolService) executeToolSync(ctx context.Context, execution *domain.Too
 	
 	// Publicar evento de conclusão
 	event := domain.ToolEvent{
-		Type:        "tool_execution_completed",
-		ExecutionID: execution.ID,
-		SessionID:   execution.SessionID,
-		ToolName:    execution.ToolName,
-		Timestamp:   time.Now(),
+		Type:      "tool_execution_completed",
+		SessionID: execution.SessionID.String(),
+		ToolName:  execution.ToolName,
+		UserID:    "", // TODO: obter do contexto da sessão
+		TenantID:  "", // TODO: obter do contexto da sessão
+		Timestamp: time.Now(),
+		Success:   true,
 		Data: map[string]interface{}{
-			"result":   result,
-			"duration": execution.Duration,
-			"status":   "completed",
+			"execution_id": execution.ID.String(),
+			"result":       result,
+			"duration":     execution.Duration,
+			"status":       "completed",
 		},
 	}
 	
@@ -229,7 +254,7 @@ func (s *ToolService) executeToolSync(ctx context.Context, execution *domain.Too
 	}
 	
 	s.logger.Info("Ferramenta executada",
-		zap.String("execution_id", execution.ID),
+		zap.String("execution_id", execution.ID.String()),
 		zap.String("tool_name", tool.Name),
 		zap.Duration("duration", execution.Duration),
 	)
@@ -248,7 +273,7 @@ func (s *ToolService) executeToolAsync(ctx context.Context, execution *domain.To
 		execution.CompletedAt = &completedAt
 		
 		s.logger.Error("Erro na execução assíncrona",
-			zap.String("execution_id", execution.ID),
+			zap.String("execution_id", execution.ID.String()),
 			zap.Error(err),
 		)
 	}
@@ -291,10 +316,10 @@ func (s *ToolService) simulateToolExecution(toolName string, parameters map[stri
 // mapExecutionToResponse mapeia execução para DTO
 func (s *ToolService) mapExecutionToResponse(execution *domain.ToolExecution) *dto.ToolExecutionResponse {
 	response := &dto.ToolExecutionResponse{
-		ID:         execution.ID,
-		SessionID:  execution.SessionID,
+		ID:         execution.ID.String(),
+		SessionID:  execution.SessionID.String(),
 		ToolName:   execution.ToolName,
-		Status:     execution.Status,
+		Status:     string(execution.Status),
 		Result:     execution.Result,
 		Error:      execution.Error,
 		StartedAt:  execution.StartedAt,

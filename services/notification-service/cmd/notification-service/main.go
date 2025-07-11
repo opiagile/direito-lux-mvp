@@ -73,7 +73,17 @@ func NewLogger(cfg *config.Config) (*zap.Logger, error) {
 
 // NewDatabase cria conexão com o banco de dados
 func NewDatabase(cfg *config.Config, logger *zap.Logger) (*sqlx.DB, error) {
-	db, err := sqlx.Connect("postgres", cfg.Database.URL)
+	// Construir URL de conexão
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.Name,
+		cfg.Database.SSLMode,
+	)
+	
+	db, err := sqlx.Connect("postgres", dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -81,7 +91,7 @@ func NewDatabase(cfg *config.Config, logger *zap.Logger) (*sqlx.DB, error) {
 	// Configurar pool de conexões
 	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-	db.SetConnMaxLifetime(time.Duration(cfg.Database.MaxLifetime) * time.Second)
+	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
 
 	// Testar conexão
 	if err := db.Ping(); err != nil {

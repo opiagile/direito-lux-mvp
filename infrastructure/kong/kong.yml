@@ -1,0 +1,186 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  # Auth Service
+  - name: auth-service
+    url: http://auth-service:8082
+    tags:
+      - auth
+      - microservice
+    routes:
+      - name: auth-route
+        paths:
+          - /auth
+          - /api/auth
+        strip_path: true
+        
+  # Tenant Service
+  - name: tenant-service
+    url: http://tenant-service:8080
+    tags:
+      - tenant
+      - microservice
+    routes:
+      - name: tenant-route
+        paths:
+          - /tenant
+          - /api/tenant
+        strip_path: true
+        
+  # Process Service
+  - name: process-service
+    url: http://process-service:8080
+    tags:
+      - process
+      - microservice
+    routes:
+      - name: process-route
+        paths:
+          - /process
+          - /api/process
+        strip_path: true
+        
+  # DataJud Service
+  - name: datajud-service
+    url: http://datajud-service:8080
+    tags:
+      - datajud
+      - microservice
+    routes:
+      - name: datajud-route
+        paths:
+          - /datajud
+          - /api/datajud
+        strip_path: true
+        
+  # Notification Service
+  - name: notification-service
+    url: http://notification-service:8080
+    tags:
+      - notification
+      - microservice
+    routes:
+      - name: notification-route
+        paths:
+          - /notification
+          - /api/notification
+        strip_path: true
+        
+  # Search Service
+  - name: search-service
+    url: http://search-service:8080
+    tags:
+      - search
+      - microservice
+    routes:
+      - name: search-route
+        paths:
+          - /search
+          - /api/search
+        strip_path: true
+        
+  # Report Service
+  - name: report-service
+    url: http://report-service:8087
+    tags:
+      - report
+      - microservice
+    routes:
+      - name: report-route
+        paths:
+          - /report
+          - /api/report
+        strip_path: true
+        
+  # MCP Service
+  - name: mcp-service
+    url: http://mcp-service:8088
+    tags:
+      - mcp
+      - microservice
+    routes:
+      - name: mcp-route
+        paths:
+          - /mcp
+          - /api/mcp
+        strip_path: true
+        
+  # AI Service
+  - name: ai-service
+    url: http://ai-service:8000
+    tags:
+      - ai
+      - microservice
+    routes:
+      - name: ai-route
+        paths:
+          - /ai
+          - /api/ai
+        strip_path: true
+        
+  # Frontend (SPA) - catch-all route
+  - name: frontend
+    url: http://frontend:3000
+    tags:
+      - frontend
+      - spa
+    routes:
+      - name: frontend-route
+        paths:
+          - /
+          - /login
+          - /register
+          - /reports
+          - /dashboard
+          - /processes
+          - /notifications
+          - /profile
+          - /billing
+          - /settings
+          - /users
+          - /search
+          - /ai
+        strip_path: false
+        
+plugins:
+  # CORS Plugin
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        - PATCH
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - X-Tenant-ID
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+        - X-Tenant-ID
+      credentials: true
+      max_age: 3600
+      
+  # Rate Limiting Plugin
+  - name: rate-limiting
+    config:
+      minute: 1000
+      hour: 10000
+      policy: local
+      
+  # Request Logging Plugin
+  - name: file-log
+    config:
+      path: /tmp/access.log
+      reopen: true

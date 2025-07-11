@@ -47,6 +47,14 @@ func main() {
 	cacheManager := &application.CacheManager{} // Configurar cache manager
 	domainService := &mockDomainService{} // Mock domain service
 
+	// Converter config para domain config
+	domainConfig := domain.DataJudConfig{
+		APIBaseURL:    cfg.DataJud.BaseURL,
+		APITimeout:    cfg.DataJud.Timeout,
+		APIRetryCount: cfg.DataJud.RetryCount,
+		APIRetryDelay: cfg.DataJud.RetryDelay,
+	}
+
 	service := application.NewDataJudService(
 		repos,
 		poolManager,
@@ -54,7 +62,7 @@ func main() {
 		circuitManager,
 		cacheManager,
 		domainService,
-		cfg.DataJud,
+		domainConfig,
 		httpClient,
 	)
 
@@ -73,8 +81,8 @@ func exemploConsultaProcesso(ctx context.Context, service *application.DataJudSe
 	req := &application.ProcessQueryRequest{
 		ProcessNumber: "0001234-56.2023.8.26.0001",
 		CourtID:       "TJSP",
-		TenantID:      "tenant-123",
-		ClientID:      "client-456",
+		TenantID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+		ClientID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 		UseCache:      true,
 		Urgent:        false,
 	}
@@ -87,8 +95,8 @@ func exemploConsultaProcesso(ctx context.Context, service *application.DataJudSe
 
 	fmt.Printf("Status: %s\n", response.Status)
 	fmt.Printf("From Cache: %v\n", response.FromCache)
-	if response.Duration != nil {
-		fmt.Printf("Duração: %v\n", *response.Duration)
+	if response.Duration > 0 {
+		fmt.Printf("Duração: %v ms\n", response.Duration)
 	}
 	
 	fmt.Println()
@@ -104,8 +112,8 @@ func exemploConsultaMovimentacoes(ctx context.Context, service *application.Data
 	req := &application.MovementQueryRequest{
 		ProcessNumber: "0001234-56.2023.8.26.0001",
 		CourtID:       "TJSP",
-		TenantID:      "tenant-123",
-		ClientID:      "client-456",
+		TenantID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+		ClientID:      uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 		Page:          1,
 		PageSize:      50,
 		DateFrom:      &dateFrom,
@@ -135,8 +143,8 @@ func exemploConsultaLote(ctx context.Context, service *application.DataJudServic
 	fmt.Println("=== Exemplo: Consulta em Lote ===")
 	
 	req := &application.BulkQueryRequest{
-		TenantID: "tenant-123",
-		ClientID: "client-456",
+		TenantID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+		ClientID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 		Queries: []application.BulkQueryItem{
 			{
 				ProcessNumber: "0001234-56.2023.8.26.0001",
@@ -151,8 +159,6 @@ func exemploConsultaLote(ctx context.Context, service *application.DataJudServic
 				CourtID:       "TJSP",
 			},
 		},
-		UseCache: true,
-		Urgent:   false,
 	}
 
 	response, err := service.BulkQuery(ctx, req)
@@ -243,11 +249,38 @@ func exemploQueryBuilder() {
 // mockDomainService implementação mock para exemplo
 type mockDomainService struct{}
 
-func (m *mockDomainService) CalculateRequestPriority(requestType domain.RequestType, urgent bool) domain.Priority {
+func (m *mockDomainService) ValidateCNPJ(cnpj string) error {
+	// Mock validation - sempre retorna nil para exemplo
+	return nil
+}
+
+func (m *mockDomainService) ValidateProcessNumber(processNumber string) error {
+	// Mock validation - sempre retorna nil para exemplo
+	return nil
+}
+
+func (m *mockDomainService) CalculateRequestPriority(requestType domain.RequestType, urgent bool) domain.RequestPriority {
 	if urgent {
 		return domain.PriorityHigh
 	}
 	return domain.PriorityNormal
+}
+
+func (m *mockDomainService) EstimateRequestDuration(requestType domain.RequestType) time.Duration {
+	switch requestType {
+	case domain.RequestTypeProcess:
+		return 5 * time.Second
+	case domain.RequestTypeMovement:
+		return 3 * time.Second
+	case domain.RequestTypeParty:
+		return 2 * time.Second
+	case domain.RequestTypeDocument:
+		return 10 * time.Second
+	case domain.RequestTypeBulk:
+		return 30 * time.Second
+	default:
+		return 5 * time.Second
+	}
 }
 
 func (m *mockDomainService) ShouldUseCache(requestType domain.RequestType, age time.Duration) bool {

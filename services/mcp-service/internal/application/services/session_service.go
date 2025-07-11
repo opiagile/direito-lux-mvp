@@ -38,35 +38,29 @@ func NewSessionService(
 
 // CreateSession cria uma nova sessão MCP
 func (s *SessionService) CreateSession(ctx context.Context, req dto.CreateSessionRequest) (*dto.SessionResponse, error) {
-	// Gerar ID da sessão
-	sessionID := uuid.New().String()
+	// Converter strings para UUIDs
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+	
+	tenantID, err := uuid.Parse(req.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid tenant ID: %w", err)
+	}
 
-	// Criar sessão
-	session := &domain.MCPSession{
-		ID:           sessionID,
-		Channel:      req.Channel,
-		UserID:       req.UserID,
-		TenantID:     req.TenantID,
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		LastActivity: time.Now(),
-		Metadata:     req.Metadata,
-		Settings: domain.SessionSettings{
-			ClaudeModel:   getOrDefault(req.Settings.ClaudeModel, "claude-3-sonnet-20241022"),
-			MaxTokens:     getOrDefaultInt(req.Settings.MaxTokens, 4096),
-			Timeout:       getOrDefaultInt(req.Settings.Timeout, 30),
-			AutoSave:      req.Settings.AutoSave,
-			Notifications: req.Settings.Notifications,
-		},
-		Context: domain.ConversationContext{
-			MessagesCount: 0,
-			TokensUsed:    0,
-			ContextData:   make(map[string]interface{}),
-		},
+	// Criar sessão usando o construtor do domain
+	session := domain.NewMCPSession(tenantID, userID, req.Channel, "")
+	
+	// Adicionar metadata ao contexto se existir
+	if req.Metadata != nil {
+		for key, value := range req.Metadata {
+			session.SetContext(key, value)
+		}
 	}
 
 	// Salvar sessão (simulação em memória)
+	sessionID := session.ID.String()
 	s.sessions[sessionID] = session
 
 	// Publicar evento
@@ -121,7 +115,7 @@ func (s *SessionService) CloseSession(ctx context.Context, sessionID string) err
 	}
 
 	// Atualizar status
-	session.Status = "closed"
+	session.Close()
 	session.UpdatedAt = time.Now()
 
 	// Publicar evento
@@ -129,13 +123,13 @@ func (s *SessionService) CloseSession(ctx context.Context, sessionID string) err
 		Type:      "session_closed",
 		SessionID: sessionID,
 		Channel:   session.Channel,
-		UserID:    session.UserID,
-		TenantID:  session.TenantID,
+		UserID:    session.UserID.String(),
+		TenantID:  session.TenantID.String(),
 		Timestamp: time.Now(),
 		Data: map[string]interface{}{
 			"duration": time.Since(session.CreatedAt).Seconds(),
-			"messages_count": session.Context.MessagesCount,
-			"tokens_used": session.Context.TokensUsed,
+			"messages_count": session.MessageCount,
+			"command_count": session.CommandCount,
 		},
 	}
 
@@ -145,8 +139,8 @@ func (s *SessionService) CloseSession(ctx context.Context, sessionID string) err
 
 	// Registrar métricas
 	if s.metrics != nil {
-		s.metrics.RecordMCPSession(session.Channel, session.TenantID, false)
-		s.metrics.RecordMCPConversation(session.Channel, session.TenantID, "completed")
+		s.metrics.RecordMCPSession(session.TenantID.String(), session.Channel, false)
+		s.metrics.RecordMCPConversation(session.TenantID.String(), session.Channel, "session_closed")
 	}
 
 	s.logger.Info("Sessão MCP fechada",
@@ -169,24 +163,24 @@ func (s *SessionService) GetSessionStatus(ctx context.Context, sessionID string)
 	}
 
 	return &dto.SessionStatusResponse{
-		ID:           session.ID,
-		Status:       session.Status,
-		IsActive:     session.Status == "active",
-		LastActivity: session.LastActivity,
+		ID:           session.ID.String(),
+		Status:       string(session.State),
+		IsActive:     session.State == domain.SessionStateActive,
+		LastActivity: session.LastInteraction,
 		Context: dto.ConversationContext{
-			MessagesCount:  session.Context.MessagesCount,
-			TokensUsed:     session.Context.TokensUsed,
-			LastTopic:      session.Context.LastTopic,
-			ActiveTools:    session.Context.ActiveTools,
-			CurrentProcess: session.Context.CurrentProcess,
-			ContextData:    session.Context.ContextData,
+			MessagesCount:  session.MessageCount,
+			TokensUsed:     0, // TODO: implementar contagem de tokens
+			LastTopic:      "", // TODO: extrair do contexto se necessário
+			ActiveTools:    []string{}, // TODO: extrair do contexto se necessário
+			CurrentProcess: "", // TODO: extrair do contexto se necessário
+			ContextData:    session.Context,
 		},
 		QuotaUsage: dto.QuotaUsage{
-			TokensUsed:    session.Context.TokensUsed,
+			TokensUsed:    0, // TODO: implementar contagem de tokens
 			TokensLimit:   10000, // TODO: Buscar do sistema de quotas
-			RequestsUsed:  session.Context.MessagesCount,
+			RequestsUsed:  session.MessageCount,
 			RequestsLimit: 100, // TODO: Buscar do sistema de quotas
-			UsagePercent:  float64(session.Context.TokensUsed) / 10000 * 100,
+			UsagePercent:  0, // TODO: calcular baseado em dados reais
 		},
 	}, nil
 }
@@ -198,7 +192,7 @@ func (s *SessionService) SendMessage(ctx context.Context, sessionID string, req 
 		return nil, fmt.Errorf("sessão não encontrada: %s", sessionID)
 	}
 
-	if session.Status != "active" {
+	if session.State != domain.SessionStateActive {
 		return nil, fmt.Errorf("sessão não está ativa")
 	}
 
@@ -215,10 +209,8 @@ func (s *SessionService) SendMessage(ctx context.Context, sessionID string, req 
 	}
 
 	// Atualizar contexto da sessão
-	session.Context.MessagesCount++
-	session.Context.TokensUsed += message.TokensUsed
-	session.LastActivity = time.Now()
-	session.UpdatedAt = time.Now()
+	session.UpdateInteraction()
+	session.SetContext("last_message_tokens", message.TokensUsed)
 
 	// TODO: Aqui seria integrado com Claude API e execução de ferramentas
 
@@ -253,29 +245,29 @@ func (s *SessionService) GetConversationHistory(ctx context.Context, sessionID s
 // mapSessionToResponse converte sessão do domínio para DTO
 func (s *SessionService) mapSessionToResponse(session *domain.MCPSession) *dto.SessionResponse {
 	return &dto.SessionResponse{
-		ID:           session.ID,
+		ID:           session.ID.String(),
 		Channel:      session.Channel,
-		UserID:       session.UserID,
-		TenantID:     session.TenantID,
-		Status:       session.Status,
+		UserID:       session.UserID.String(),
+		TenantID:     session.TenantID.String(),
+		Status:       string(session.State),
 		CreatedAt:    session.CreatedAt,
 		UpdatedAt:    session.UpdatedAt,
-		LastActivity: session.LastActivity,
-		Metadata:     session.Metadata,
+		LastActivity: session.LastInteraction,
+		Metadata:     session.Context,
 		Settings: dto.SessionSettings{
-			ClaudeModel:   session.Settings.ClaudeModel,
-			MaxTokens:     session.Settings.MaxTokens,
-			Timeout:       session.Settings.Timeout,
-			AutoSave:      session.Settings.AutoSave,
-			Notifications: session.Settings.Notifications,
+			ClaudeModel:   "claude-3-sonnet-20241022", // Valor padrão
+			MaxTokens:     4096, // Valor padrão
+			Timeout:       30, // Valor padrão
+			AutoSave:      true, // Valor padrão
+			Notifications: true, // Valor padrão
 		},
 		Context: dto.ConversationContext{
-			MessagesCount:  session.Context.MessagesCount,
-			TokensUsed:     session.Context.TokensUsed,
-			LastTopic:      session.Context.LastTopic,
-			ActiveTools:    session.Context.ActiveTools,
-			CurrentProcess: session.Context.CurrentProcess,
-			ContextData:    session.Context.ContextData,
+			MessagesCount:  session.MessageCount,
+			TokensUsed:     0, // TODO: implementar contagem de tokens
+			LastTopic:      "", // TODO: extrair do contexto se necessário
+			ActiveTools:    []string{}, // TODO: extrair do contexto se necessário
+			CurrentProcess: "", // TODO: extrair do contexto se necessário
+			ContextData:    session.Context,
 		},
 	}
 }

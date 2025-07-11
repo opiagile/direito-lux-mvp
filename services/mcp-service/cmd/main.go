@@ -12,6 +12,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	"github.com/direito-lux/mcp-service/internal/domain"
 	"github.com/direito-lux/mcp-service/internal/infrastructure/config"
 	"github.com/direito-lux/mcp-service/internal/infrastructure/database"
 	"github.com/direito-lux/mcp-service/internal/infrastructure/logging"
@@ -44,12 +45,12 @@ func main() {
 		}),
 
 		// Messaging (RabbitMQ)
-		fx.Provide(func(cfg *config.Config, logger *zap.Logger) (*messaging.RabbitMQConnection, error) {
+		fx.Provide(func(cfg *config.Config, logger *zap.Logger, metrics *metrics.Metrics) (*messaging.RabbitMQConnection, error) {
 			if cfg.Environment == "test" {
 				// Para testes, retornar nil sem erro
 				return nil, nil
 			}
-			return messaging.NewRabbitMQConnection(cfg, logger)
+			return messaging.NewRabbitMQConnection(cfg, logger, metrics)
 		}),
 
 		// Metrics
@@ -80,22 +81,27 @@ func main() {
 			return services.NewSessionService(logger, metrics, eventBus)
 		}),
 
+		// Tool Registry
+		fx.Provide(func() *domain.ToolRegistry {
+			return domain.NewToolRegistry()
+		}),
+
 		fx.Provide(func(
 			logger *zap.Logger,
 			metrics *metrics.Metrics,
 			eventBus *events.EventBus,
+			toolRegistry *domain.ToolRegistry,
 		) *services.ToolService {
-			return services.NewToolService(logger, metrics, eventBus)
+			return services.NewToolService(logger, metrics, eventBus, toolRegistry)
 		}),
 
 		// HTTP Server
 		fx.Provide(func(
 			cfg *config.Config,
 			logger *zap.Logger,
-			sessionService *services.SessionService,
-			toolService *services.ToolService,
-		) (*http.Server, error) {
-			return http.NewServer(cfg, logger, sessionService, toolService)
+			metrics *metrics.Metrics,
+		) *http.Server {
+			return http.NewServer(cfg, logger, metrics)
 		}),
 
 		// Lifecycle hooks
@@ -123,7 +129,7 @@ func main() {
 
 					// Iniciar servidor HTTP em goroutine
 					go func() {
-						if err := server.Start(ctx); err != nil {
+						if err := server.Start(); err != nil {
 							logger.Error("❌ Erro ao iniciar servidor HTTP", zap.Error(err))
 						}
 					}()
@@ -137,11 +143,6 @@ func main() {
 				},
 				OnStop: func(ctx context.Context) error {
 					logger.Info("🛑 Parando MCP Service...")
-
-					// Parar servidor HTTP
-					if err := server.Stop(ctx); err != nil {
-						logger.Error("Erro ao parar servidor HTTP", zap.Error(err))
-					}
 
 					// Fechar tracer
 					if err := tracer.Close(); err != nil {

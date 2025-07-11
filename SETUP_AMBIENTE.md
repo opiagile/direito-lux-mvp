@@ -223,6 +223,7 @@ make dev
 - **Process Service**: http://localhost:8083
 - **DataJud Service**: http://localhost:8084
 - **Report Service**: http://localhost:8087
+- **🆕 Billing Service**: http://localhost:8089
 - **Frontend Web App**: http://localhost:3000
 
 ### Infraestrutura
