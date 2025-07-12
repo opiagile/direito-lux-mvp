@@ -1,0 +1,16 @@
+Bot Telegram - Direito Lux Staging
+==================================
+Nome: Direito Lux Staging Bot
+Username: @direitolux_staging_bot
+ID: 7927061803
+Link: https://t.me/direitolux_staging_bot
+Token: [SALVO NO .ENV]
+Webhook: https://direito-lux-staging.loca.lt/webhook/telegram
+Configurado em: 2025-07-11
+
+STATUS: ✅ TOTALMENTE CONFIGURADO E FUNCIONANDO
+- Token válido
+- Comandos configurados
+- Descrição adicionada
+- Webhook ativo
+- Notification service reiniciado

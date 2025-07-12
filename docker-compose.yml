@@ -627,10 +627,10 @@ services:
       # ASAAS Configuration
       - ASAAS_API_KEY=demo_key
       - ASAAS_ENVIRONMENT=sandbox
-      - ASAAS_WEBHOOK_URL=https://locking-model-sports-anti.trycloudflare.com/billing/webhooks/asaas
+      - ASAAS_WEBHOOK_URL=https://direito-lux-staging.loca.lt/billing/webhooks/asaas
       # NOWPayments Configuration
       - NOWPAYMENTS_API_KEY=demo_key
-      - NOWPAYMENTS_WEBHOOK_URL=https://locking-model-sports-anti.trycloudflare.com/billing/webhooks/crypto
+      - NOWPAYMENTS_WEBHOOK_URL=https://direito-lux-staging.loca.lt/billing/webhooks/crypto
       # NF-e Configuration (Curitiba)
       - NFE_MUNICIPALITY=Curitiba
       - NFE_STATE=PR

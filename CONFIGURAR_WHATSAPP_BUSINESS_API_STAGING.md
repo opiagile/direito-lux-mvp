@@ -23,7 +23,7 @@ Propósito: Notificações jurídicas
 
 #### 2.3 Configurar Webhook
 ```
-Webhook URL: https://locking-model-sports-anti.trycloudflare.com/webhook/whatsapp
+Webhook URL: https://direito-lux-staging.loca.lt/webhook/whatsapp
 Verify Token: direito_lux_staging_2025
 ```
 
@@ -55,14 +55,14 @@ WHATSAPP_ACCESS_TOKEN=EAAxxxxxxxxxxxxxxxx
 WHATSAPP_PHONE_NUMBER_ID=123456789012345
 WHATSAPP_BUSINESS_ACCOUNT_ID=123456789012345
 WHATSAPP_VERIFY_TOKEN=direito_lux_staging_2025
-WHATSAPP_WEBHOOK_URL=https://locking-model-sports-anti.trycloudflare.com/webhook/whatsapp
+WHATSAPP_WEBHOOK_URL=https://direito-lux-staging.loca.lt/webhook/whatsapp
 ```
 
 ### 5. CONFIGURAR WEBHOOK NO FACEBOOK
 
 #### 5.1 Webhook Configuration
 ```
-Callback URL: https://locking-model-sports-anti.trycloudflare.com/webhook/whatsapp
+Callback URL: https://direito-lux-staging.loca.lt/webhook/whatsapp
 Verify Token: direito_lux_staging_2025
 ```
 
@@ -77,7 +77,7 @@ Verify Token: direito_lux_staging_2025
 #### 6.1 Verificar Webhook
 ```bash
 # Meta vai fazer GET request para verificar webhook
-curl -X GET "https://locking-model-sports-anti.trycloudflare.com/webhook/whatsapp?hub.mode=subscribe&hub.challenge=teste&hub.verify_token=direito_lux_staging_2025"
+curl -X GET "https://direito-lux-staging.loca.lt/webhook/whatsapp?hub.mode=subscribe&hub.challenge=teste&hub.verify_token=direito_lux_staging_2025"
 ```
 
 #### 6.2 Testar Envio de Mensagem

@@ -103,12 +103,17 @@ func SetupRoutes(router *gin.Engine, config *RouterConfig) {
 	}
 
 	// Webhooks (sem autenticação)
-	_ = router.Group("/webhooks")
+	webhookHandler := handlers.NewWebhookHandler(config.Logger)
+	webhooks := router.Group("/webhook")
 	{
-		// WhatsApp webhook seria adicionado aqui no futuro
-		// webhooks.POST("/whatsapp", whatsappHandler.HandleWebhook)
+		// Telegram webhook
+		webhooks.POST("/telegram", webhookHandler.HandleTelegramWebhook)
 		
-		// Email bounce/complaint webhooks
+		// WhatsApp webhook (verificação e mensagens)
+		webhooks.GET("/whatsapp", webhookHandler.HandleWhatsAppWebhook)
+		webhooks.POST("/whatsapp", webhookHandler.HandleWhatsAppWebhook)
+		
+		// Email bounce/complaint webhooks (futuro)
 		// webhooks.POST("/email/bounce", emailHandler.HandleBounce)
 		// webhooks.POST("/email/complaint", emailHandler.HandleComplaint)
 	}

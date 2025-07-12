@@ -151,6 +151,9 @@ migrate -path migrations -database "postgres://direito_lux:direito_lux_pass_dev@
 # ✅ NOVA: Migração de Password Reset Tokens (08/01/2025)
 # 004_create_password_reset_tokens_table.sql - Para recuperação de senha
 # Criada automaticamente com o sistema completo de autenticação
+
+# ✅ NOVO: Telegram Bot configurado (12/07/2025)
+# Token real funcional configurado no notification service
 ```
 
 ### 4. Popular Dados de Desenvolvimento (Automatizado)
@@ -224,6 +227,7 @@ make dev
 - **DataJud Service**: http://localhost:8084
 - **Report Service**: http://localhost:8087
 - **🆕 Billing Service**: http://localhost:8089
+- **Notification Service**: http://localhost:8085 (Telegram bot funcional)
 - **Frontend Web App**: http://localhost:3000
 
 ### Infraestrutura
