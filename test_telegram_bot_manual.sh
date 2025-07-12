@@ -4,7 +4,7 @@
 
 echo "🤖 Testando bot Telegram manualmente..."
 
-BOT_TOKEN="7927061803:AAGC5GMerAe9CVegcl85o6BTFj2hqkcjO04"
+BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
 
 # Enviar mensagem de teste para chat específico (você pode usar seu próprio chat ID)
 echo "Para testar o bot completamente, você precisa:"
