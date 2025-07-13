@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/config"
 )
 
 // Metrics estrutura que contém todas as métricas
@@ -363,7 +364,9 @@ func (m *Metrics) collectSystemMetrics() {
 // HTTPMiddleware middleware do Gin para coletar métricas HTTP
 func (m *Metrics) HTTPMiddleware() gin.HandlerFunc {
 	if !m.config.Metrics.Enabled {
-		return gin.Next
+		return func(c *gin.Context) {
+			c.Next()
+		}
 	}
 
 	return func(c *gin.Context) {

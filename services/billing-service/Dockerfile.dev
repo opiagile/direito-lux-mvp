@@ -29,10 +29,11 @@ COPY go.mod go.sum ./
 # Download das dependências (se go.mod existir) - ainda como root
 RUN if [ -f go.mod ]; then go mod download; fi
 
-# Criar usuário de desenvolvimento
+# Criar usuário de desenvolvimento e configurar permissões Go
 RUN addgroup -g 1000 appgroup && \
     adduser -D -s /bin/sh -u 1000 -G appgroup appuser && \
-    chown -R appuser:appgroup /app
+    chown -R appuser:appgroup /app && \
+    chown -R appuser:appgroup /go
 
 # Definir usuário
 USER appuser

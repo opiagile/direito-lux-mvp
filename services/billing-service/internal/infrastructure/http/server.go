@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/config"
-	"github.com/direito-lux/template-service/internal/infrastructure/metrics"
-	"github.com/direito-lux/template-service/internal/infrastructure/http/middleware"
-	"github.com/direito-lux/template-service/internal/infrastructure/http/handlers"
+	"github.com/direito-lux/billing-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/metrics"
+	"github.com/direito-lux/billing-service/internal/infrastructure/http/middleware"
+	"github.com/direito-lux/billing-service/internal/infrastructure/http/handlers"
 )
 
 // Server estrutura do servidor HTTP

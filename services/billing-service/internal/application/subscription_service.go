@@ -68,7 +68,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, cmd Create
 	}
 
 	// Criar ou buscar cliente
-	customer, err := s.getOrCreateCustomer(ctx, cmd)
+	_, err = s.getOrCreateCustomer(ctx, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create customer: %w", err)
 	}

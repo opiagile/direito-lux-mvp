@@ -1,14 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/google/uuid"
 	"github.com/direito-lux/billing-service/internal/application"
-	"github.com/direito-lux/billing-service/internal/domain"
 )
 
 // BillingHandler handler para endpoints de billing

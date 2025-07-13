@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/config"
 )
 
 // HealthResponse estrutura de resposta do health check

@@ -2,19 +2,29 @@ package middleware
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/config"
-	"github.com/direito-lux/template-service/internal/infrastructure/logging"
+	"github.com/direito-lux/billing-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/logging"
 )
 
 // Logger middleware para logging de requisições
 func Logger(logger *zap.Logger) gin.HandlerFunc {
-	return gin.LoggerWithWriter(logger.Sugar().Desugar().Core())
+	return gin.LoggerWithConfig(gin.LoggerConfig{
+		Formatter: func(param gin.LogFormatterParams) string {
+			logger.Info("HTTP Request",
+				zap.String("method", param.Method),
+				zap.String("path", param.Path),
+				zap.Int("status", param.StatusCode),
+				zap.Duration("latency", param.Latency),
+				zap.String("ip", param.ClientIP),
+			)
+			return ""
+		},
+	})
 }
 
 // Recovery middleware para recuperação de panics

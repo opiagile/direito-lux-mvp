@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/logging"
+	"github.com/direito-lux/billing-service/internal/infrastructure/logging"
 )
 
 // DomainEvent interface para eventos de domínio

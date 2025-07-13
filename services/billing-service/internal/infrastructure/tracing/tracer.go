@@ -11,8 +11,8 @@ import (
 	"github.com/uber/jaeger-client-go/config"
 	"go.uber.org/zap"
 
-	appconfig "github.com/direito-lux/template-service/internal/infrastructure/config"
-	"github.com/direito-lux/template-service/internal/infrastructure/logging"
+	appconfig "github.com/direito-lux/billing-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/logging"
 )
 
 // Tracer wrapper para o tracer do Jaeger

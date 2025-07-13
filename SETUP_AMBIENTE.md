@@ -152,8 +152,13 @@ migrate -path migrations -database "postgres://direito_lux:direito_lux_pass_dev@
 # 004_create_password_reset_tokens_table.sql - Para recuperação de senha
 # Criada automaticamente com o sistema completo de autenticação
 
-# ✅ NOVO: Telegram Bot configurado (12/07/2025)
-# Token real funcional configurado no notification service
+# ✅ NOVO: Telegram Bot configurado (13/07/2025)
+# @direitolux_staging_bot totalmente funcional
+# Token real configurado no notification service
+
+# ✅ NOVO: GitHub Secrets configurado (13/07/2025)
+# Todas as chaves de API estão no GitHub Secrets
+# Ver SECRETS_DOCUMENTATION.md para detalhes
 ```
 
 ### 4. Popular Dados de Desenvolvimento (Automatizado)
@@ -225,9 +230,12 @@ make dev
 - **Tenant Service**: http://localhost:8082
 - **Process Service**: http://localhost:8083
 - **DataJud Service**: http://localhost:8084
+- **AI Service**: http://localhost:8000
+- **Search Service**: http://localhost:8086
 - **Report Service**: http://localhost:8087
+- **MCP Service**: http://localhost:8088
 - **🆕 Billing Service**: http://localhost:8089
-- **Notification Service**: http://localhost:8085 (Telegram bot funcional)
+- **Notification Service**: http://localhost:8085 (Telegram bot @direitolux_staging_bot)
 - **Frontend Web App**: http://localhost:3000
 
 ### Infraestrutura

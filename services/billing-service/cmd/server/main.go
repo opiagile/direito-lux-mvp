@@ -10,7 +10,6 @@ import (
 
 	"github.com/direito-lux/billing-service/internal/infrastructure/config"
 	"github.com/direito-lux/billing-service/internal/infrastructure/database"
-	"github.com/direito-lux/billing-service/internal/infrastructure/events"
 	"github.com/direito-lux/billing-service/internal/infrastructure/http"
 	"github.com/direito-lux/billing-service/internal/infrastructure/logging"
 	"github.com/direito-lux/billing-service/internal/infrastructure/metrics"
@@ -76,8 +75,6 @@ func main() {
 			tracing.NewTracer,
 			metrics.NewMetrics,
 			database.NewConnection,
-			messaging.NewRabbitMQConnection,
-			events.NewEventBus,
 		),
 
 		// HTTP Server

@@ -13,10 +13,10 @@ import (
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 
-	"github.com/direito-lux/template-service/internal/infrastructure/config"
-	"github.com/direito-lux/template-service/internal/infrastructure/logging"
-	"github.com/direito-lux/template-service/internal/infrastructure/metrics"
-	"github.com/direito-lux/template-service/internal/infrastructure/tracing"
+	"github.com/direito-lux/billing-service/internal/infrastructure/config"
+	"github.com/direito-lux/billing-service/internal/infrastructure/logging"
+	"github.com/direito-lux/billing-service/internal/infrastructure/metrics"
+	"github.com/direito-lux/billing-service/internal/infrastructure/tracing"
 )
 
 // Connection estrutura para conexão com banco de dados

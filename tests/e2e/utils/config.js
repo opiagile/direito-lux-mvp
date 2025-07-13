@@ -7,7 +7,7 @@ const config = {
   services: {
     auth: 'http://localhost:8081',
     tenant: 'http://localhost:8082', 
-    process: 'http://localhost:8080',
+    process: 'http://localhost:8083',
     datajud: 'http://localhost:8084',
     notification: 'http://localhost:8085',
     ai: 'http://localhost:8000',
@@ -17,35 +17,35 @@ const config = {
     frontend: 'http://localhost:3000'
   },
   
-  // Tenants de teste (conforme STATUS_IMPLEMENTACAO.md)
+  // Tenants de teste (conforme dados reais do seed)
   tenants: {
     silva: {
       id: '11111111-1111-1111-1111-111111111111',
       name: 'Silva & Associados',
       plan: 'starter',
       email: 'admin@silvaassociados.com.br',
-      password: 'password'
+      password: '123456'
     },
     costa: {
-      id: '22222222-2222-2222-2222-222222222222', 
-      name: 'Costa & Santos',
+      id: '33333333-3333-3333-3333-333333333333', 
+      name: 'Costa Santos',
       plan: 'professional',
       email: 'admin@costasantos.com.br',
-      password: 'password'
+      password: '123456'
     },
-    machado: {
-      id: '33333333-3333-3333-3333-333333333333',
-      name: 'Machado Advogados', 
+    pereira: {
+      id: '44444444-4444-4444-4444-444444444444',
+      name: 'Pereira Oliveira', 
       plan: 'business',
-      email: 'admin@machadoadvogados.com.br',
-      password: 'password'
+      email: 'admin@pereiraoliveira.com.br',
+      password: '123456'
     },
     barros: {
-      id: '44444444-4444-4444-4444-444444444444',
+      id: '77777777-7777-7777-7777-777777777777',
       name: 'Barros Enterprise',
       plan: 'enterprise', 
       email: 'admin@barrosent.com.br',
-      password: 'password'
+      password: '123456'
     }
   },
   

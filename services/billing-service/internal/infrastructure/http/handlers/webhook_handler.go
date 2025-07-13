@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/google/uuid"
 	"github.com/direito-lux/billing-service/internal/application"
 	"github.com/direito-lux/billing-service/internal/domain"
 )

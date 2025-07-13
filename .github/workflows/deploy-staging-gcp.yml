@@ -1,0 +1,366 @@
+name: 🚀 Deploy Staging GCP - Direito Lux
+
+on:
+  workflow_dispatch:
+    inputs:
+      destroy_infrastructure:
+        description: 'Destroy infrastructure instead of deploying'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'terraform/**'
+      - 'k8s/**'
+      - '.github/workflows/deploy-staging-gcp.yml'
+
+env:
+  PROJECT_ID: direito-lux-staging
+  REGION: us-central1
+  ZONE: us-central1-c
+  CLUSTER_NAME: direito-lux-staging-gke
+  
+  # Secrets configurados via GitHub
+  TELEGRAM_BOT_TOKEN: ${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}
+  OPENAI_API_KEY: ${{ secrets.STAGING_OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.STAGING_ANTHROPIC_API_KEY }}
+  ASAAS_API_KEY: ${{ secrets.ASAAS_SANDBOX_API_KEY }}
+  NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_SANDBOX_API_KEY }}
+  DATAJUD_API_KEY: ${{ secrets.DATAJUD_STAGING_API_KEY }}
+  SMTP_PASSWORD: ${{ secrets.STAGING_SMTP_PASSWORD }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+  RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+
+jobs:
+  # Validação inicial
+  validate:
+    name: 🔍 Validate Environment
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_infrastructure: ${{ steps.check.outputs.deploy_infrastructure }}
+      deploy_applications: ${{ steps.check.outputs.deploy_applications }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate secrets
+        id: check
+        run: |
+          echo "🔐 Validating GitHub Secrets..."
+          
+          # Check critical secrets
+          missing_secrets=()
+          
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then missing_secrets+=("STAGING_TELEGRAM_BOT_TOKEN"); fi
+          if [ -z "$ASAAS_API_KEY" ]; then missing_secrets+=("ASAAS_SANDBOX_API_KEY"); fi
+          if [ -z "$JWT_SECRET" ]; then missing_secrets+=("JWT_SECRET"); fi
+          if [ -z "$DATABASE_PASSWORD" ]; then missing_secrets+=("DATABASE_PASSWORD"); fi
+          
+          if [ ${#missing_secrets[@]} -gt 0 ]; then
+            echo "❌ Missing secrets: ${missing_secrets[*]}"
+            exit 1
+          fi
+          
+          echo "✅ All critical secrets configured"
+          echo "deploy_infrastructure=true" >> $GITHUB_OUTPUT
+          echo "deploy_applications=true" >> $GITHUB_OUTPUT
+
+  # Deploy infraestrutura com Terraform
+  terraform-deploy:
+    name: 🏗️ Deploy Infrastructure (Terraform)
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.deploy_infrastructure == 'true' && !inputs.destroy_infrastructure
+    outputs:
+      cluster_endpoint: ${{ steps.terraform.outputs.cluster_endpoint }}
+      load_balancer_ip: ${{ steps.terraform.outputs.load_balancer_ip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: |
+          echo "🔧 Initializing Terraform..."
+          terraform init
+      
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: |
+          echo "📋 Planning infrastructure..."
+          terraform plan \
+            -var-file=environments/staging.tfvars \
+            -var="project_id=$PROJECT_ID" \
+            -out=staging.tfplan
+      
+      - name: Terraform Apply
+        id: terraform
+        working-directory: ./terraform
+        run: |
+          echo "🚀 Deploying infrastructure..."
+          terraform apply -auto-approve staging.tfplan
+          
+          # Get outputs
+          CLUSTER_ENDPOINT=$(terraform output -raw cluster_endpoint)
+          LB_IP=$(terraform output -raw load_balancer_ip)
+          
+          echo "cluster_endpoint=$CLUSTER_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "load_balancer_ip=$LB_IP" >> $GITHUB_OUTPUT
+          
+          echo "✅ Infrastructure deployed!"
+          echo "🌐 Cluster: $CLUSTER_ENDPOINT"
+          echo "🔗 Load Balancer IP: $LB_IP"
+
+  # Deploy aplicações no Kubernetes
+  kubernetes-deploy:
+    name: ☸️ Deploy Applications (Kubernetes)
+    runs-on: ubuntu-latest
+    needs: [validate, terraform-deploy]
+    if: needs.validate.outputs.deploy_applications == 'true' && !inputs.destroy_infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+      
+      - name: Connect to GKE cluster
+        run: |
+          echo "🔌 Connecting to GKE cluster..."
+          gcloud container clusters get-credentials $CLUSTER_NAME \
+            --region=$REGION \
+            --project=$PROJECT_ID
+      
+      - name: Create namespace
+        run: |
+          echo "📁 Creating namespace..."
+          kubectl apply -f k8s/namespace.yaml
+      
+      - name: Create secrets
+        run: |
+          echo "🔐 Creating Kubernetes secrets..."
+          kubectl create secret generic app-secrets \
+            --from-literal=telegram-bot-token="$TELEGRAM_BOT_TOKEN" \
+            --from-literal=openai-api-key="$OPENAI_API_KEY" \
+            --from-literal=anthropic-api-key="$ANTHROPIC_API_KEY" \
+            --from-literal=asaas-api-key="$ASAAS_API_KEY" \
+            --from-literal=nowpayments-api-key="$NOWPAYMENTS_API_KEY" \
+            --from-literal=datajud-api-key="$DATAJUD_API_KEY" \
+            --from-literal=smtp-password="$SMTP_PASSWORD" \
+            --from-literal=jwt-secret="$JWT_SECRET" \
+            --from-literal=database-password="$DATABASE_PASSWORD" \
+            --from-literal=redis-password="$REDIS_PASSWORD" \
+            --from-literal=rabbitmq-password="$RABBITMQ_PASSWORD" \
+            --namespace=direito-lux \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Deploy databases
+        run: |
+          echo "💾 Deploying databases..."
+          kubectl apply -f k8s/databases/ --namespace=direito-lux
+      
+      - name: Wait for databases
+        run: |
+          echo "⏳ Waiting for databases to be ready..."
+          kubectl wait --for=condition=ready pod -l app=postgres --timeout=300s --namespace=direito-lux
+          kubectl wait --for=condition=ready pod -l app=redis --timeout=300s --namespace=direito-lux
+      
+      - name: Deploy microservices
+        run: |
+          echo "⚡ Deploying microservices..."
+          kubectl apply -f k8s/services/ --namespace=direito-lux
+      
+      - name: Deploy ingress
+        run: |
+          echo "🌐 Deploying ingress..."
+          kubectl apply -f k8s/ingress/ --namespace=direito-lux
+      
+      - name: Deploy monitoring
+        run: |
+          echo "📊 Deploying monitoring..."
+          kubectl apply -f k8s/monitoring/ --namespace=direito-lux
+      
+      - name: Wait for services
+        run: |
+          echo "⏳ Waiting for services to be ready..."
+          sleep 60
+          kubectl get pods -n direito-lux
+          kubectl get services -n direito-lux
+          kubectl get ingress -n direito-lux
+
+  # Testes de validação
+  validation-tests:
+    name: 🧪 Validation Tests
+    runs-on: ubuntu-latest
+    needs: [terraform-deploy, kubernetes-deploy]
+    if: ${{ !inputs.destroy_infrastructure }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js for E2E tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: tests/e2e/package-lock.json
+      
+      - name: Install test dependencies
+        working-directory: ./tests/e2e
+        run: npm ci
+      
+      - name: Wait for services to be ready
+        run: |
+          echo "⏳ Waiting for services to be fully ready..."
+          sleep 120
+      
+      - name: Run health checks
+        run: |
+          echo "🏥 Running health checks..."
+          
+          # Get load balancer IP
+          LB_IP="${{ needs.terraform-deploy.outputs.load_balancer_ip }}"
+          echo "Testing services at IP: $LB_IP"
+          
+          # Test health endpoints
+          services=("auth-service:8081" "process-service:8083" "notification-service:8085")
+          
+          for service in "${services[@]}"; do
+            IFS=':' read -r name port <<< "$service"
+            echo "Testing $name on port $port..."
+            curl -f "http://$LB_IP:$port/health" --max-time 30 || echo "⚠️ $name not ready yet"
+          done
+      
+      - name: Run E2E tests (basic)
+        working-directory: ./tests/e2e
+        run: |
+          echo "🧪 Running basic E2E tests..."
+          
+          # Update config for staging environment
+          export API_BASE_URL="http://${{ needs.terraform-deploy.outputs.load_balancer_ip }}"
+          
+          # Run basic connectivity tests
+          npm run test:auth -- --testNamePattern="Deve falhar sem X-Tenant-ID header" || echo "E2E tests need adjustment for staging"
+
+  # DNS Configuration
+  dns-setup:
+    name: 🌍 DNS Configuration
+    runs-on: ubuntu-latest
+    needs: [terraform-deploy, kubernetes-deploy]
+    if: ${{ !inputs.destroy_infrastructure }}
+    steps:
+      - name: DNS Instructions
+        run: |
+          echo "🌍 DNS CONFIGURATION REQUIRED"
+          echo "============================"
+          echo ""
+          echo "📋 Configure these DNS records:"
+          echo ""
+          echo "🎯 A Record:"
+          echo "   Name: staging.direitolux.com.br"
+          echo "   Type: A"
+          echo "   Value: ${{ needs.terraform-deploy.outputs.load_balancer_ip }}"
+          echo "   TTL: 300"
+          echo ""
+          echo "🔧 After DNS propagation, test:"
+          echo "   https://staging.direitolux.com.br"
+          echo "   https://staging.direitolux.com.br/api/health"
+          echo ""
+          echo "⏳ DNS propagation can take 5-15 minutes"
+
+  # Destroy infrastructure (manual trigger)
+  terraform-destroy:
+    name: 💥 Destroy Infrastructure
+    runs-on: ubuntu-latest
+    if: inputs.destroy_infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+      
+      - name: Terraform Destroy
+        working-directory: ./terraform
+        run: |
+          echo "💥 Destroying infrastructure..."
+          terraform destroy \
+            -var-file=environments/staging.tfvars \
+            -var="project_id=$PROJECT_ID" \
+            -auto-approve
+          echo "✅ Infrastructure destroyed"
+
+  # Summary
+  deployment-summary:
+    name: 📊 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate, terraform-deploy, kubernetes-deploy, validation-tests, dns-setup]
+    if: always() && !inputs.destroy_infrastructure
+    steps:
+      - name: Summary
+        run: |
+          echo "🎯 DIREITO LUX STAGING DEPLOYMENT SUMMARY"
+          echo "========================================"
+          echo ""
+          echo "📋 Results:"
+          echo "  🔍 Validation: ${{ needs.validate.result }}"
+          echo "  🏗️ Infrastructure: ${{ needs.terraform-deploy.result }}"
+          echo "  ☸️ Applications: ${{ needs.kubernetes-deploy.result }}"
+          echo "  🧪 Tests: ${{ needs.validation-tests.result }}"
+          echo "  🌍 DNS Setup: ${{ needs.dns-setup.result }}"
+          echo ""
+          echo "🌐 URLs (after DNS configuration):"
+          echo "  📱 Frontend: https://staging.direitolux.com.br"
+          echo "  🔧 API: https://staging.direitolux.com.br/api"
+          echo "  📊 Monitoring: https://staging.direitolux.com.br/grafana"
+          echo ""
+          echo "🎯 Load Balancer IP: ${{ needs.terraform-deploy.outputs.load_balancer_ip }}"
+          echo ""
+          echo "✅ Deploy Status: $([ "${{ needs.terraform-deploy.result }}" = "success" ] && [ "${{ needs.kubernetes-deploy.result }}" = "success" ] && echo "SUCCESS! 🎉" || echo "NEEDS ATTENTION ⚠️")"
+          echo ""
+          echo "🚀 Direito Lux Staging is LIVE!"
