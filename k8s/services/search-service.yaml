@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: direito-lux-staging
+  labels:
+    app: search-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+      - name: search-service
+        image: ghcr.io/direito-lux/search-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: search-service
+  ports:
+  - name: http
+    port: 8086
+    targetPort: 8080
+  type: ClusterIP

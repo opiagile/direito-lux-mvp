@@ -18,12 +18,12 @@ metadata:
 spec:
   tls:
   - hosts:
-    - staging.direitolux.com
-    - api-staging.direitolux.com
+    - staging.direitolux.com.br
+    - api-staging.direitolux.com.br
     secretName: direito-lux-staging-tls
   rules:
   # Frontend
-  - host: staging.direitolux.com
+  - host: staging.direitolux.com.br
     http:
       paths:
       - path: /
@@ -35,7 +35,7 @@ spec:
               number: 3000
   
   # API Gateway
-  - host: api-staging.direitolux.com
+  - host: api-staging.direitolux.com.br
     http:
       paths:
       # Auth Service
@@ -116,6 +116,15 @@ spec:
         backend:
           service:
             name: datajud-service
+            port:
+              number: 8080
+      
+      # Billing Service
+      - path: /billing(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: billing-service
             port:
               number: 8080
       
@@ -139,7 +148,7 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.direitolux.com"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.direitolux.com.br"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
     nginx.ingress.kubernetes.io/enable-cors: "true"
@@ -152,12 +161,12 @@ metadata:
 spec:
   tls:
   - hosts:
-    - app.direitolux.com
-    - api.direitolux.com
+    - app.direitolux.com.br
+    - api.direitolux.com.br
     secretName: direito-lux-production-tls
   rules:
   # Frontend
-  - host: app.direitolux.com
+  - host: app.direitolux.com.br
     http:
       paths:
       - path: /
@@ -169,7 +178,7 @@ spec:
               number: 3000
   
   # API Gateway
-  - host: api.direitolux.com
+  - host: api.direitolux.com.br
     http:
       paths:
       # Auth Service
@@ -250,6 +259,15 @@ spec:
         backend:
           service:
             name: datajud-service
+            port:
+              number: 8080
+      
+      # Billing Service
+      - path: /billing(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: billing-service
             port:
               number: 8080
       

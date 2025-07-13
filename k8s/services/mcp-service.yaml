@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-service
+  namespace: direito-lux-staging
+  labels:
+    app: mcp-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-service
+  template:
+    metadata:
+      labels:
+        app: mcp-service
+    spec:
+      containers:
+      - name: mcp-service
+        image: ghcr.io/direito-lux/mcp-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: anthropic-api-key
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: mcp-service
+  ports:
+  - name: http
+    port: 8088
+    targetPort: 8080
+  type: ClusterIP

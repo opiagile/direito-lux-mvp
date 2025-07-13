@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-service
+  namespace: direito-lux-staging
+  labels:
+    app: report-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: report-service
+  template:
+    metadata:
+      labels:
+        app: report-service
+    spec:
+      containers:
+      - name: report-service
+        image: ghcr.io/direito-lux/report-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: report-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: report-service
+  ports:
+  - name: http
+    port: 8087
+    targetPort: 8080
+  type: ClusterIP

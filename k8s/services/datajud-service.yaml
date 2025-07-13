@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datajud-service-config
+  namespace: direito-lux-staging
+data:
+  SERVER_PORT: "8080"
+  ENVIRONMENT: "staging"
+  LOG_LEVEL: "info"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "direito_lux_staging"
+  DB_USER: "direito_lux"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "4"
+  RABBITMQ_HOST: "rabbitmq-service"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "guest"
+  RABBITMQ_VHOST: "/"
+  RABBITMQ_EXCHANGE: "direito_lux.events"
+  RABBITMQ_QUEUE: "datajud-service.events"
+  JAEGER_ENABLED: "true"
+  JAEGER_AGENT_HOST: "jaeger"
+  JAEGER_AGENT_PORT: "6831"
+  PROMETHEUS_ENABLED: "true"
+  PROMETHEUS_PORT: "9090"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: datajud-service-secret
+  namespace: direito-lux-staging
+type: Opaque
+data:
+  DB_PASSWORD: ZGV2X3Bhc3N3b3JkXzEyMw== # dev_password_123 base64 encoded
+  REDIS_PASSWORD: ZGV2X3JlZGlzXzEyMw== # dev_redis_123 base64 encoded
+  RABBITMQ_PASSWORD: Z3Vlc3Q= # guest base64 encoded
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datajud-service
+  namespace: direito-lux-staging
+  labels:
+    app: datajud-service
+    component: backend
+    tier: core
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: datajud-service
+  template:
+    metadata:
+      labels:
+        app: datajud-service
+        component: backend
+        tier: core
+    spec:
+      containers:
+      - name: datajud-service
+        image: ghcr.io/direito-lux/datajud-service:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: datajud-service-config
+              key: SERVER_PORT
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: datajud-service-config
+              key: ENVIRONMENT
+        - name: DATAJUD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: datajud-api-key
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datajud-service
+  namespace: direito-lux-staging
+  labels:
+    app: datajud-service
+    component: backend
+    tier: core
+spec:
+  selector:
+    app: datajud-service
+  ports:
+  - name: http
+    port: 8084
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
