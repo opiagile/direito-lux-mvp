@@ -21,6 +21,7 @@ variable "subnet_cidrs" {
     public       = string
     private      = string
     database     = string
+    gke          = string
     gke_pods     = string
     gke_services = string
   })

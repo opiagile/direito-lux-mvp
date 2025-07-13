@@ -67,6 +67,7 @@ variable "subnet_cidrs" {
     public    = string
     private   = string
     database  = string
+    gke       = string
     gke_pods  = string
     gke_services = string
   })
@@ -74,6 +75,7 @@ variable "subnet_cidrs" {
     public    = "10.0.1.0/24"
     private   = "10.0.2.0/24"
     database  = "10.0.3.0/24"
+    gke       = "10.0.4.0/24"
     gke_pods  = "10.1.0.0/16"
     gke_services = "10.2.0.0/16"
   }

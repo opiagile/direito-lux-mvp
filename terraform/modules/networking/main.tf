@@ -67,7 +67,7 @@ resource "google_compute_subnetwork" "database" {
 # GKE Subnet with secondary ranges
 resource "google_compute_subnetwork" "gke" {
   name          = "${var.vpc_name}-gke"
-  ip_cidr_range = var.subnet_cidrs.private
+  ip_cidr_range = var.subnet_cidrs.gke
   region        = var.region
   network       = google_compute_network.vpc.id
 
