@@ -189,7 +189,7 @@ Use /configurar para ajustar notificações.`
 • Ou envie apenas os números
 
 🎯 *Exemplo:*
-\`1234567892023826001\`
+1234567892023826001
 
 📊 *Informações retornadas:*
 • Dados do processo

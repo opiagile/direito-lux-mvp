@@ -18,7 +18,7 @@ on:
       - '.github/workflows/deploy-staging-gcp.yml'
 
 env:
-  PROJECT_ID: direito-lux-staging
+  PROJECT_ID: direito-lux-staging-2025
   REGION: us-central1
   ZONE: us-central1-c
   CLUSTER_NAME: direito-lux-staging-gke
