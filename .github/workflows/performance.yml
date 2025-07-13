@@ -207,7 +207,7 @@ jobs:
           k6 run performance-tests/${{ matrix.service }}-${{ matrix.test_scenario }}.js
       
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-results-${{ matrix.service }}-${{ matrix.test_scenario }}
           path: performance-results/
@@ -423,7 +423,7 @@ jobs:
           " > performance-results/database-performance.log
       
       - name: Upload database performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: database-performance-results
           path: performance-results/database-performance.log
@@ -493,7 +493,7 @@ jobs:
           lhci autorun
       
       - name: Upload Lighthouse results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-results
           path: .lighthouseci/
@@ -511,7 +511,7 @@ jobs:
     if: always()
     steps:
       - name: Download all performance results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: performance-results/
       

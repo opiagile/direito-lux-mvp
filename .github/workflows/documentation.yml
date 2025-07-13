@@ -200,7 +200,7 @@ jobs:
           echo "✅ Generated frontend documentation"
       
       - name: Upload API documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: api-documentation
           path: docs/
@@ -216,7 +216,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Download API documentation
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: api-documentation
           path: docs/
