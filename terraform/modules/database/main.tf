@@ -221,7 +221,11 @@ resource "google_secret_manager_secret" "db_password" {
   labels = var.labels
 
   replication {
-    automatic = true
+    user_managed {
+      replicas {
+        location = "us-central1"
+      }
+    }
   }
 }
 
@@ -239,7 +243,11 @@ resource "google_secret_manager_secret" "redis_auth" {
   labels = var.labels
 
   replication {
-    automatic = true
+    user_managed {
+      replicas {
+        location = "us-central1"
+      }
+    }
   }
 }
 
@@ -262,7 +270,7 @@ resource "google_monitoring_alert_policy" "database_cpu" {
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project_id}:${google_sql_database_instance.postgres.name}\""
       duration        = "300s"
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.8
 
       aggregations {
@@ -290,7 +298,7 @@ resource "google_monitoring_alert_policy" "database_connections" {
     condition_threshold {
       filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project_id}:${google_sql_database_instance.postgres.name}\""
       duration        = "300s"
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = var.environment == "production" ? 320 : 160
 
       aggregations {
@@ -318,7 +326,7 @@ resource "google_monitoring_alert_policy" "redis_memory" {
     condition_threshold {
       filter          = "resource.type=\"redis_instance\" AND resource.labels.instance_id=\"${google_redis_instance.cache.name}\""
       duration        = "300s"
-      comparison      = "COMPARISON_GREATER_THAN"
+      comparison      = "COMPARISON_GT"
       threshold_value = 0.9
 
       aggregations {

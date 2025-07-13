@@ -139,10 +139,7 @@ resource "google_container_cluster" "primary" {
     }
   }
 
-  # Cluster telemetry
-  cluster_telemetry {
-    type = "ENABLED"
-  }
+  # Telemetry is enabled by default in modern GKE versions
 
   # Logging and monitoring
   logging_service    = "logging.googleapis.com/kubernetes"
@@ -152,7 +149,7 @@ resource "google_container_cluster" "primary" {
     enable_components = [
       "SYSTEM_COMPONENTS",
       "WORKLOADS",
-      "API_SERVER"
+      "APISERVER"
     ]
   }
 
@@ -167,10 +164,7 @@ resource "google_container_cluster" "primary" {
     }
   }
 
-  # Security configuration
-  pod_security_policy_config {
-    enabled = var.enable_pod_security_policy
-  }
+  # Pod Security Policy is deprecated, use Pod Security Standards instead
 
   # Database encryption
   database_encryption {
