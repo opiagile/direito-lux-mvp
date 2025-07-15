@@ -30,6 +30,33 @@ cache/
 storage/temp/
 
 # =============================================================================
+# DEPLOYMENT & STAGING TEMPORARY FILES
+# =============================================================================
+# Scripts temporários de deployment
+*_temp.sh
+*_staging_temp.sh
+deploy_staging_manual.sh
+build-and-deploy.sh
+activate_staging_complete.sh
+
+# Arquivos temporários de texto
+comando_rapido.txt
+commit_message.txt
+*_temp.txt
+
+# HTML temporários
+acessar_staging.html
+*_temp.html
+
+# Terraform plans (binários)
+*.tfplan
+*.tfstate.backup
+
+# Kubernetes temporários
+*-temp.yaml
+ingress-temp-*.yaml
+
+# =============================================================================
 # DATABASE
 # =============================================================================
 *.db
