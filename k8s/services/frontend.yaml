@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/your-org/direito-lux-frontend:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/frontend:latest
         ports:
         - containerPort: 3000
           name: http
@@ -190,7 +190,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/your-org/direito-lux-frontend:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/frontend:latest
         ports:
         - containerPort: 3000
           name: http

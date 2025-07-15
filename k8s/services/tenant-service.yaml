@@ -59,7 +59,7 @@ spec:
     spec:
       containers:
       - name: tenant-service
-        image: ghcr.io/your-org/direito-lux-tenant-service:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/tenant-service:latest
         ports:
         - containerPort: 8080
           name: http
@@ -259,7 +259,7 @@ spec:
     spec:
       containers:
       - name: tenant-service
-        image: ghcr.io/your-org/direito-lux-tenant-service:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/tenant-service:latest
         ports:
         - containerPort: 8080
           name: http

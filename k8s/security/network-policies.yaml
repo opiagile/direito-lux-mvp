@@ -47,7 +47,7 @@ spec:
           tier: backend
     - namespaceSelector:
         matchLabels:
-          name: nginx-ingress
+          kubernetes.io/metadata.name: ingress-nginx
   egress:
   - to:
     - podSelector:
@@ -75,7 +75,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          name: nginx-ingress
+          kubernetes.io/metadata.name: ingress-nginx
   egress:
   - to:
     - podSelector:
@@ -148,7 +148,7 @@ spec:
           tier: backend
     - namespaceSelector:
         matchLabels:
-          name: nginx-ingress
+          kubernetes.io/metadata.name: ingress-nginx
   egress:
   - to:
     - podSelector:
@@ -183,7 +183,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          name: nginx-ingress
+          kubernetes.io/metadata.name: ingress-nginx
   egress:
   - to:
     - podSelector:

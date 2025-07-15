@@ -485,7 +485,7 @@ cliente@costasantos.com.br / password
 
 ---
 
-## **3.7 Search Service (Porta 8086)**
+## **3.7 Search Service (Porta 8086)**1
 
 ### **TC1101 - Busca Elasticsearch** 🔍
 - **Endpoint**: `GET /api/v1/search`

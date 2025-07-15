@@ -23,25 +23,10 @@ resource "google_sql_database_instance" "postgres" {
     disk_autoresize            = true
     disk_autoresize_limit      = var.database_config.disk_size * 10
 
-    # Database flags for optimization
+    # Database flags for optimization - simplified for staging
     database_flags {
       name  = "max_connections"
       value = var.environment == "production" ? "400" : "200"
-    }
-
-    database_flags {
-      name  = "shared_preload_libraries"
-      value = "pg_stat_statements"
-    }
-
-    database_flags {
-      name  = "log_statement"
-      value = "all"
-    }
-
-    database_flags {
-      name  = "log_min_duration_statement"
-      value = "1000"  # Log queries taking longer than 1 second
     }
 
     # Backup configuration
@@ -167,7 +152,6 @@ resource "google_redis_instance" "cache" {
   redis_configs = {
     maxmemory-policy = "allkeys-lru"
     timeout          = "300"
-    tcp-keepalive    = "60"
   }
 
   # Maintenance policy

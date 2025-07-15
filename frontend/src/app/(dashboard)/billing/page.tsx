@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { 
   CreditCard, 
   Crown, 
-  Package, 
   TrendingUp, 
   Calendar, 
   Download, 

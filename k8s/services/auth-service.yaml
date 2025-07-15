@@ -5,6 +5,7 @@ metadata:
   namespace: direito-lux-staging
 data:
   SERVER_PORT: "8080"
+  PORT: "8080"
   ENVIRONMENT: "staging"
   LOG_LEVEL: "info"
   DB_HOST: "postgres-service"
@@ -17,6 +18,7 @@ data:
   RABBITMQ_HOST: "rabbitmq-service"
   RABBITMQ_PORT: "5672"
   RABBITMQ_USER: "guest"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq-service:5672/"
   RABBITMQ_VHOST: "/"
   RABBITMQ_EXCHANGE: "direito_lux.events"
   RABBITMQ_QUEUE: "auth-service.events"
@@ -27,6 +29,10 @@ data:
   JAEGER_AGENT_PORT: "6831"
   PROMETHEUS_ENABLED: "true"
   PROMETHEUS_PORT: "9090"
+  KEYCLOAK_ENABLED: "false"
+  KEYCLOAK_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "direito-lux"
+  KEYCLOAK_CLIENT_ID: "auth-service"
 ---
 apiVersion: v1
 kind: Secret
@@ -39,6 +45,7 @@ data:
   REDIS_PASSWORD: ZGV2X3JlZGlzXzEyMw== # dev_redis_123 base64 encoded
   RABBITMQ_PASSWORD: Z3Vlc3Q= # guest base64 encoded
   JWT_SECRET_KEY: ZGV2X2p3dF9zZWNyZXRfa2V5XzEyMw== # dev_jwt_secret_key_123 base64 encoded
+  KEYCLOAK_CLIENT_SECRET: ZGV2X2tleWNsb2FrX3NlY3JldA== # dev_keycloak_secret base64 encoded
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -61,7 +68,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: ghcr.io/your-org/direito-lux-auth-service:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/auth-service:latest
         ports:
         - containerPort: 8080
           name: http
@@ -73,6 +80,11 @@ spec:
             configMapKeyRef:
               name: auth-service-config
               key: SERVER_PORT
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: PORT
         - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:
@@ -123,11 +135,46 @@ spec:
             secretKeyRef:
               name: auth-service-secret
               key: REDIS_PASSWORD
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: RABBITMQ_URL
         - name: JWT_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: auth-service-secret
               key: JWT_SECRET_KEY
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: JWT_SECRET_KEY
+        - name: KEYCLOAK_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_ENABLED
+        - name: KEYCLOAK_URL
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_URL
+        - name: KEYCLOAK_REALM
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_REALM
+        - name: KEYCLOAK_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_CLIENT_ID
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: KEYCLOAK_CLIENT_SECRET
         livenessProbe:
           httpGet:
             path: /health
@@ -229,6 +276,10 @@ data:
   JAEGER_AGENT_PORT: "6831"
   PROMETHEUS_ENABLED: "true"
   PROMETHEUS_PORT: "9090"
+  KEYCLOAK_ENABLED: "false"
+  KEYCLOAK_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "direito-lux"
+  KEYCLOAK_CLIENT_ID: "auth-service"
 ---
 apiVersion: v1
 kind: Secret
@@ -263,7 +314,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: ghcr.io/your-org/direito-lux-auth-service:latest
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/auth-service:latest
         ports:
         - containerPort: 8080
           name: http
@@ -275,6 +326,11 @@ spec:
             configMapKeyRef:
               name: auth-service-config
               key: SERVER_PORT
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: PORT
         - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:
@@ -325,11 +381,46 @@ spec:
             secretKeyRef:
               name: auth-service-secret
               key: REDIS_PASSWORD
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: RABBITMQ_URL
         - name: JWT_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: auth-service-secret
               key: JWT_SECRET_KEY
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: JWT_SECRET_KEY
+        - name: KEYCLOAK_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_ENABLED
+        - name: KEYCLOAK_URL
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_URL
+        - name: KEYCLOAK_REALM
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_REALM
+        - name: KEYCLOAK_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: auth-service-config
+              key: KEYCLOAK_CLIENT_ID
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: KEYCLOAK_CLIENT_SECRET
         livenessProbe:
           httpGet:
             path: /health
