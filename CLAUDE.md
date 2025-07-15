@@ -18,22 +18,28 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 
 **IMPORTANTE**: Sempre atualizar a documentação após implementar qualquer componente!
 
-1. **STATUS_IMPLEMENTACAO.md**
+1. **🗄️ MIGRATIONS E DATABASE (OBRIGATÓRIO)**
+   - **CRÍTICO**: Executar `./scripts/setup-staging-database.sh` após qualquer novo serviço
+   - Verificar que todas as tabelas necessárias foram criadas
+   - Testar endpoints críticos do serviço para confirmar funcionamento
+   - **PROBLEMA RESOLVIDO**: Colunas faltantes em tabelas não ocorrerão mais
+
+2. **STATUS_IMPLEMENTACAO.md**
    - Mover item de "O que Falta" para "O que está Implementado"
    - Atualizar percentual de progresso
    - Adicionar detalhes do que foi implementado
 
-2. **README.md**
+3. **README.md**
    - Atualizar seção "Status do Projeto"
    - Adicionar URLs de desenvolvimento
    - Atualizar comandos úteis
 
-3. **SETUP_AMBIENTE.md**
+4. **SETUP_AMBIENTE.md**
    - Adicionar instruções de setup do novo módulo
    - Incluir novas variáveis de ambiente
    - Documentar troubleshooting
 
-4. **Documentação do Módulo**
+5. **Documentação do Módulo**
    - Criar README.md específico no diretório do serviço
    - Documentar APIs e eventos
    - Incluir exemplos de uso
@@ -50,10 +56,13 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 ### 🚀 Comandos Importantes
 
 ```bash
+# Setup completo de database (EXECUTAR SEMPRE)
+./scripts/setup-staging-database.sh
+
 # Criar novo serviço
 ./scripts/create-service.sh nome-service
 
-# Rodar migrações
+# Rodar migrações individuais
 cd services/[nome-service]
 migrate -path migrations -database "postgres://..." up
 

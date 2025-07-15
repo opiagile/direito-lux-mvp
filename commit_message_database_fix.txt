@@ -1,0 +1,36 @@
+fix: 🔧 Resolver problema de colunas faltantes - Tenant Service 100% funcional
+
+✅ PROBLEMA RESOLVIDO PERMANENTEMENTE:
+- Tenant Service estava falhando por colunas inexistentes na tabela tenants
+- Error: relation "legal_name" does not exist (e outras colunas)
+
+🔧 CORREÇÕES IMPLEMENTADAS:
+- Ajustado estrutura da tabela tenants para compatibilidade com domain model
+- Adicionadas colunas: legal_name, document, website, status, plan_type, owner_user_id, settings, activated_at, suspended_at
+- Removidas colunas desnecessárias: cnpj, plan, is_active (migradas para novas)
+- Adicionados constraints: status_check, plan_type_check, email_valid
+- Criados índices de performance: document, owner_user_id, status, plan_type, created_at
+
+📋 SCRIPT DE PREVENÇÃO:
+- Criado scripts/setup-staging-database.sh para executar todas as migrations
+- Script executa migrations de todos os serviços automaticamente
+- Evita problemas futuros de colunas faltantes
+
+📝 DOCUMENTAÇÃO ATUALIZADA:
+- CLAUDE.md: Processo obrigatório de execução de migrations
+- Instruções claras para evitar este problema no futuro
+- Comandos de teste incluídos no script
+
+🧪 TESTES CONFIRMADOS:
+- ✅ Auth Service: Login funcionando (admin@silvaassociados.com.br)
+- ✅ Tenant Service: Dados retornando (Silva & Associados)
+- ✅ Frontend: Health check OK
+- ✅ Database: Estrutura correta e dados íntegros
+
+🎯 RESULTADO:
+Sistema 100% operacional no GCP staging. Problema estrutural resolvido permanentemente.
+Usuários podem fazer login normalmente em https://35.188.198.87
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

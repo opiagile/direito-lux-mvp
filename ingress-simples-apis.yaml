@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: direito-lux-ingress-apis
+  namespace: direito-lux-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  # Regra para qualquer host (IP direto e domínios)
+  - http:
+      paths:
+      # Auth API - redireciona /api/v1/auth/* para auth-service
+      - path: /api/v1/auth/
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8080
+      
+      # Tenant API
+      - path: /api/v1/tenants/
+        pathType: Prefix
+        backend:
+          service:
+            name: tenant-service
+            port:
+              number: 8080
+      
+      # Frontend - default
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+  
+  # Default backend
+  defaultBackend:
+    service:
+      name: frontend
+      port:
+        number: 3000

@@ -1,0 +1,128 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: direito-lux-ingress-completo
+  namespace: direito-lux-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  # Regra para IP direto (35.188.198.87)
+  - http:
+      paths:
+      # APIs - Auth Service
+      - path: /api/v1/auth(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8080
+      
+      # APIs - Tenant Service  
+      - path: /api/v1/tenants(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: tenant-service
+            port:
+              number: 8080
+              
+      # APIs - Process Service
+      - path: /api/v1/processes(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: process-service
+            port:
+              number: 8080
+      
+      # Frontend - tudo que não for /api
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+  
+  # Regras para staging.direitolux.com.br (quando DNS propagar)
+  - host: staging.direitolux.com.br
+    http:
+      paths:
+      # APIs - Auth Service
+      - path: /api/v1/auth(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8080
+      
+      # APIs - Tenant Service  
+      - path: /api/v1/tenants(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: tenant-service
+            port:
+              number: 8080
+              
+      # APIs - Process Service
+      - path: /api/v1/processes(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: process-service
+            port:
+              number: 8080
+      
+      # Frontend - root e outras rotas
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+
+  # Regras para api-staging.direitolux.com (APIs dedicadas)
+  - host: api-staging.direitolux.com.br
+    http:
+      paths:
+      # APIs - Auth Service
+      - path: /auth(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8080
+      
+      # APIs - Tenant Service  
+      - path: /tenants(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: tenant-service
+            port:
+              number: 8080
+              
+      # APIs - Process Service
+      - path: /processes(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: process-service
+            port:
+              number: 8080
+
+  # Default backend para qualquer rota não matchada
+  defaultBackend:
+    service:
+      name: frontend
+      port:
+        number: 3000
