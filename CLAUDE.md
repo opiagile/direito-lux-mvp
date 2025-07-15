@@ -258,6 +258,47 @@ TELEGRAM_WEBHOOK_URL=https://staging.direitolux.com.br/webhook/telegram
 - Todos os códigos e configurações documentados
 - Próximos passos detalhados
 
+## 💰 GERENCIAMENTO DE CUSTOS GCP
+
+### 📊 **PROBLEMA RESOLVIDO (15/07/2025)**
+- **Situação**: R$115 em 2 dias = R$1.725/mês com 6 nodes e2-standard-2
+- **Solução**: Scripts de automação + 3 estratégias de economia
+- **Economia**: Até 98% (R$20.340/ano)
+
+### 🛠️ **DOCUMENTAÇÃO CRIADA**
+- **GUIA_OPERACIONAL_GCP.md** - Gerenciamento diário completo
+- **CHEAT_SHEET_GCP.md** - Comandos rápidos e referência
+- **SETUP_INICIAL_GCP.md** - Configuração do zero
+- **SOLUCAO_CUSTOS_GCP.md** - Análise técnica detalhada
+
+### ⚡ **COMANDOS ESSENCIAIS**
+```bash
+# Iniciar ambiente
+./scripts/gcp-cost-optimizer.sh start
+
+# Parar ambiente  
+./scripts/gcp-cost-optimizer.sh stop
+
+# Ver custos
+./scripts/gcp-cost-optimizer.sh costs
+
+# Emergência (parar tudo)
+./scripts/migrate-to-cloud-run.sh emergency
+
+# Auto-shutdown (para às 23h)
+./scripts/setup-auto-shutdown.sh setup
+
+# Cloud Run (economia máxima)
+./scripts/migrate-to-cloud-run.sh setup-cloudrun
+```
+
+### 🎯 **ESTRATÉGIAS DISPONÍVEIS**
+1. **🟢 Cloud Run** - R$30/mês (98% economia) - RECOMENDADO
+2. **🟡 GKE Auto-shutdown** - R$450/mês (83% economia) - DESENVOLVIMENTO
+3. **🔴 GKE Manual** - Variável (50-90% economia) - PRODUÇÃO
+
+**⚠️ IMPORTANTE**: Sempre verificar custos e desligar após uso!
+
 ## 🎯 Diferenciais do Produto
 
 - WhatsApp em TODOS os planos (diferencial competitivo)
