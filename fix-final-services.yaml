@@ -1,0 +1,220 @@
+# SOLUÇÃO FINAL - Usando PostgreSQL Real + Configuração Ultra Permissiva
+# Objetivo: Funcionar mesmo que lentamente
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service-final
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service-final
+  template:
+    metadata:
+      labels:
+        app: auth-service-final
+    spec:
+      containers:
+      - name: auth-service
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/auth-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Database config - USANDO POSTGRESQL EPHEMERAL QUE FUNCIONA
+        - name: DB_HOST
+          value: "10.2.47.195"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "direito_lux_staging"
+        - name: DB_USER
+          value: "direito_lux"
+        - name: DB_PASSWORD
+          value: "direito_lux_password"
+        # Redis config - USANDO REDIS QUE FUNCIONA
+        - name: REDIS_HOST
+          value: "redis-ephemeral-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        # RabbitMQ config - USANDO RABBITMQ QUE FUNCIONA
+        - name: RABBITMQ_URL
+          value: "amqp://guest:guest@rabbitmq-service:5672/"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq-service"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "guest"
+        # App config
+        - name: PORT
+          value: "8080"
+        - name: SERVER_PORT
+          value: "8080"
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "debug"
+        # JWT config
+        - name: JWT_SECRET
+          value: "direito-lux-jwt-secret-key-staging-2025"
+        - name: JWT_ALGORITHM
+          value: "HS256"
+        - name: JWT_EXPIRATION_MINUTES
+          value: "60"
+        # Disable problematic features
+        - name: PROMETHEUS_ENABLED
+          value: "false"
+        - name: JAEGER_ENABLED
+          value: "false"
+        - name: KEYCLOAK_ENABLED
+          value: "false"
+        # Keycloak config (required even when disabled)
+        - name: KEYCLOAK_URL
+          value: "http://keycloak:8080"
+        - name: KEYCLOAK_REALM
+          value: "direito-lux"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "direito-lux-client"
+        - name: KEYCLOAK_CLIENT_SECRET
+          value: "fake-secret-disabled"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        # ULTRA PERMISSIVO - Dar tempo para conectar
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 180  # 3 minutos
+          periodSeconds: 60
+          timeoutSeconds: 30
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 120   # 2 minutos
+          periodSeconds: 30
+          timeoutSeconds: 15
+          failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-final
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: auth-service-final
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tenant-service-final
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tenant-service-final
+  template:
+    metadata:
+      labels:
+        app: tenant-service-final
+    spec:
+      containers:
+      - name: tenant-service
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/tenant-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Database config - USANDO POSTGRESQL EPHEMERAL QUE FUNCIONA
+        - name: DB_HOST
+          value: "10.2.47.195"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "direito_lux_staging"
+        - name: DB_USER
+          value: "direito_lux"
+        - name: DB_PASSWORD
+          value: "direito_lux_password"
+        # Redis config - USANDO REDIS QUE FUNCIONA
+        - name: REDIS_HOST
+          value: "redis-ephemeral-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        # RabbitMQ config - USANDO RABBITMQ QUE FUNCIONA
+        - name: RABBITMQ_URL
+          value: "amqp://guest:guest@rabbitmq-service:5672/"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq-service"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "guest"
+        # App config
+        - name: PORT
+          value: "8080"
+        - name: SERVER_PORT
+          value: "8080"
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "debug"
+        # Disable problematic features
+        - name: PROMETHEUS_ENABLED
+          value: "false"
+        - name: JAEGER_ENABLED
+          value: "false"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        # ULTRA PERMISSIVO - Dar tempo para conectar
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 180  # 3 minutos
+          periodSeconds: 60
+          timeoutSeconds: 30
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 120   # 2 minutos
+          periodSeconds: 30
+          timeoutSeconds: 15
+          failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-service-final
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: tenant-service-final
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

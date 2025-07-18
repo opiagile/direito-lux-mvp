@@ -1,0 +1,38 @@
+# Ingress para MOCK SERVICES - Solução emergencial
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: direito-lux-ingress-mock
+  namespace: direito-lux-staging
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "direito-lux-staging-ip"
+    ingress.gcp.cloud.google.com/force-ssl-redirect: "true"
+spec:
+  rules:
+  - http:
+      paths:
+      # Mock Auth service
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: mock-auth-service
+            port:
+              number: 8080
+      # Mock Tenant service
+      - path: /api/v1/tenants
+        pathType: Prefix
+        backend:
+          service:
+            name: mock-tenant-service
+            port:
+              number: 8080
+      # Frontend (mantido)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000

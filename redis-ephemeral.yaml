@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-ephemeral
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-ephemeral
+  template:
+    metadata:
+      labels:
+        app: redis-ephemeral
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+        command: ["redis-server", "--appendonly", "yes"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-ephemeral-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: redis-ephemeral
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP

@@ -1,0 +1,151 @@
+# MOCK SERVICES - Apenas para desbloquear teste do frontend
+# Retorna 200 OK para health checks e APIs básicas
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-auth-service
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-auth-service
+  template:
+    metadata:
+      labels:
+        app: mock-auth-service
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: mock-auth-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mock-auth-config
+  namespace: direito-lux-staging
+data:
+  default.conf: |
+    server {
+        listen 80;
+        
+        # Health check
+        location /health {
+            return 200 '{"status":"healthy","service":"auth-service","timestamp":"2025-07-16T01:00:00Z"}';
+            add_header Content-Type application/json;
+        }
+        
+        # Login (mock)
+        location /api/v1/auth/login {
+            return 200 '{"token":"mock-jwt-token","user":{"id":"1","email":"test@test.com"}}';
+            add_header Content-Type application/json;
+        }
+        
+        # Register (mock)
+        location /api/v1/auth/register {
+            return 201 '{"message":"User created successfully"}';
+            add_header Content-Type application/json;
+        }
+        
+        # Qualquer outra rota
+        location / {
+            return 200 '{"status":"ok","message":"Mock service responding"}';
+            add_header Content-Type application/json;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-auth-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: mock-auth-service
+  ports:
+  - port: 8080
+    targetPort: 80
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-tenant-service
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-tenant-service
+  template:
+    metadata:
+      labels:
+        app: mock-tenant-service
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: mock-tenant-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mock-tenant-config
+  namespace: direito-lux-staging
+data:
+  default.conf: |
+    server {
+        listen 80;
+        
+        # Health check
+        location /health {
+            return 200 '{"status":"healthy","service":"tenant-service","timestamp":"2025-07-16T01:00:00Z"}';
+            add_header Content-Type application/json;
+        }
+        
+        # Create tenant (Costa Advogados)
+        location /api/v1/tenants/ {
+            if ($request_method = POST) {
+                return 201 '{"id":"costa-advogados","name":"Costa Advogados","status":"created","message":"Tenant criado com sucesso!"}';
+            }
+            return 200 '{"tenants":[{"id":"costa-advogados","name":"Costa Advogados"}]}';
+            add_header Content-Type application/json;
+        }
+        
+        # Qualquer outra rota
+        location / {
+            return 200 '{"status":"ok","message":"Mock tenant service responding"}';
+            add_header Content-Type application/json;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-tenant-service
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: mock-tenant-service
+  ports:
+  - port: 8080
+    targetPort: 80
+  type: ClusterIP

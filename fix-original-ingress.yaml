@@ -1,0 +1,38 @@
+# Ingress usando serviços ORIGINAIS que estão rodando
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: direito-lux-ingress-original
+  namespace: direito-lux-staging
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "direito-lux-staging-ip"
+    ingress.gcp.cloud.google.com/force-ssl-redirect: "true"
+spec:
+  rules:
+  - http:
+      paths:
+      # Auth service ORIGINAL (que está Running)
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8080
+      # Tenant service ORIGINAL (que está Running) 
+      - path: /api/v1/tenants
+        pathType: Prefix
+        backend:
+          service:
+            name: tenant-service
+            port:
+              number: 8080
+      # Frontend (mantido)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000

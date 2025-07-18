@@ -14,6 +14,22 @@ O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processo
 
 ## 📋 Processo de Desenvolvimento
 
+### 🚨 **REGRA FUNDAMENTAL - DOCUMENTAÇÃO CONTÍNUA OBRIGATÓRIA**
+
+**⚠️ CRÍTICO**: NUNCA DESENVOLVER SEM DOCUMENTAR EM TEMPO REAL
+
+**Durante QUALQUER desenvolvimento, é OBRIGATÓRIO**:
+
+1. **📝 Criar STATUS por microserviço**: `services/[nome-service]/STATUS_[NOME]_SERVICE.md`
+2. **⏰ Atualizar documentação a cada 2 horas** de desenvolvimento
+3. **📊 Documentar TODA decisão técnica** e problema resolvido
+4. **📈 Manter STATUS_IMPLEMENTACAO.md sempre atualizado**
+5. **🔄 Evitar perda de contexto** entre sessões de desenvolvimento
+
+**📋 Template**: Consultar `PROCESSO_DOCUMENTACAO.md` no diretório `documentos_direito_lux_contexto_completo/`
+
+**🔥 SEM DOCUMENTAÇÃO = SEM DESENVOLVIMENTO!**
+
 ### 🔄 Ao Finalizar Cada Módulo/Serviço
 
 **IMPORTANTE**: Sempre atualizar a documentação após implementar qualquer componente!

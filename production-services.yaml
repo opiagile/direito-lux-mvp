@@ -1,0 +1,257 @@
+# SOLUÇÃO PRODUÇÃO REAL - Conectividade Garantida
+# IPs diretos + Init containers + Aguardar dependências
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service-production
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service-production
+  template:
+    metadata:
+      labels:
+        app: auth-service-production
+    spec:
+      # Init container para aguardar PostgreSQL
+      initContainers:
+      - name: wait-postgres
+        image: postgres:13-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Aguardando PostgreSQL..."
+          until pg_isready -h postgres-ephemeral-service -p 5432 -U direito_lux -d direito_lux_staging; do
+            echo "PostgreSQL não está pronto - aguardando..."
+            sleep 2
+          done
+          echo "PostgreSQL está pronto!"
+      - name: wait-redis  
+        image: redis:7-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Aguardando Redis..."
+          until redis-cli -h redis-ephemeral-service -p 6379 ping; do
+            echo "Redis não está pronto - aguardando..."
+            sleep 2
+          done
+          echo "Redis está pronto!"
+      containers:
+      - name: auth-service
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/auth-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Database config - IPs DIRETOS
+        - name: DB_HOST
+          value: "postgres-ephemeral-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "direito_lux_staging"
+        - name: DB_USER
+          value: "direito_lux"
+        - name: DB_PASSWORD
+          value: "direito_lux_password"
+        # Redis config - IPs DIRETOS
+        - name: REDIS_HOST
+          value: "redis-ephemeral-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        # RabbitMQ config - IPs DIRETOS
+        - name: RABBITMQ_URL
+          value: "amqp://guest:guest@rabbitmq-service:5672/"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq-service"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "guest"
+        # App config
+        - name: PORT
+          value: "8080"
+        - name: SERVER_PORT
+          value: "8080"
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "debug"
+        # JWT config
+        - name: JWT_SECRET
+          value: "direito-lux-jwt-secret-key-staging-2025"
+        - name: JWT_ALGORITHM
+          value: "HS256"
+        - name: JWT_EXPIRATION_MINUTES
+          value: "60"
+        # Disable problematic features
+        - name: PROMETHEUS_ENABLED
+          value: "false"
+        - name: JAEGER_ENABLED
+          value: "false"
+        - name: KEYCLOAK_ENABLED
+          value: "false"
+        # Keycloak config (required even when disabled)
+        - name: KEYCLOAK_URL
+          value: "http://keycloak:8080"
+        - name: KEYCLOAK_REALM
+          value: "direito-lux"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "direito-lux-client"
+        - name: KEYCLOAK_CLIENT_SECRET
+          value: "fake-secret-disabled"
+        resources:
+          requests:
+            cpu: "25m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
+            memory: "256Mi"
+        # Health checks generosos mas reais
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-production
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: auth-service-production
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tenant-service-production
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tenant-service-production
+  template:
+    metadata:
+      labels:
+        app: tenant-service-production
+    spec:
+      # Init container para aguardar PostgreSQL
+      initContainers:
+      - name: wait-postgres
+        image: postgres:13-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Aguardando PostgreSQL..."
+          until pg_isready -h postgres-ephemeral-service -p 5432 -U direito_lux -d direito_lux_staging; do
+            echo "PostgreSQL não está pronto - aguardando..."
+            sleep 2
+          done
+          echo "PostgreSQL está pronto!"
+      containers:
+      - name: tenant-service
+        image: us-central1-docker.pkg.dev/direito-lux-staging-2025/direito-lux-staging/tenant-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Database config - IPs DIRETOS
+        - name: DB_HOST
+          value: "postgres-ephemeral-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "direito_lux_staging"
+        - name: DB_USER
+          value: "direito_lux"
+        - name: DB_PASSWORD
+          value: "direito_lux_password"
+        # Redis config - IPs DIRETOS  
+        - name: REDIS_HOST
+          value: "redis-ephemeral-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        # RabbitMQ config - IPs DIRETOS
+        - name: RABBITMQ_URL
+          value: "amqp://guest:guest@rabbitmq-service:5672/"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq-service"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "guest"
+        # App config
+        - name: PORT
+          value: "8080"
+        - name: SERVER_PORT
+          value: "8080"
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "debug"
+        # Disable problematic features
+        - name: PROMETHEUS_ENABLED
+          value: "false"
+        - name: JAEGER_ENABLED
+          value: "false"
+        resources:
+          requests:
+            cpu: "25m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
+            memory: "256Mi"
+        # Health checks generosos mas reais
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-service-production
+  namespace: direito-lux-staging
+spec:
+  selector:
+    app: tenant-service-production
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

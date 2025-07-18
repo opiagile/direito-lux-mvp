@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-ephemeral
+  namespace: direito-lux-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-ephemeral
+  template:
+    metadata:
+      labels:
+        app: postgres-ephemeral
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "direito_lux_staging"
+        - name: POSTGRES_USER
+          value: "direito_lux"
+        - name: POSTGRES_PASSWORD
+          value: "direito_lux_password"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"

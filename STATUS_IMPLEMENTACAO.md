@@ -1,5 +1,27 @@
 # Status de Implementação - Direito Lux (ATUALIZADO - 14/07/2025)
 
+## 🚨 **PROCESSO DE DOCUMENTAÇÃO CONTÍNUA - OBRIGATÓRIO**
+
+### **⚠️ IMPORTANTE: Documentação deve ser atualizada SEMPRE**
+
+Este arquivo `STATUS_IMPLEMENTACAO.md` deve ser atualizado **imediatamente** após **qualquer** implementação. 
+
+**📋 Responsabilidades**:
+1. **Atualizar percentuais** após completar funcionalidades
+2. **Mover itens** de "O que Falta" para "O que está Implementado"
+3. **Documentar problemas** encontrados e soluções aplicadas
+4. **Registrar decisões** técnicas importantes
+5. **Manter histórico** de atualizações
+
+**📁 Arquivos de STATUS por serviço**:
+- `services/auth-service/STATUS_AUTH_SERVICE.md`
+- `services/tenant-service/STATUS_TENANT_SERVICE.md`
+- [etc...] ⟵ **CRIAR PARA CADA SERVIÇO**
+
+**📖 Processo completo**: `documentos_direito_lux_contexto_completo/PROCESSO_DOCUMENTACAO.md`
+
+---
+
 ## 📊 Visão Geral do Projeto
 
 O Direito Lux é uma plataforma SaaS para monitoramento automatizado de processos jurídicos, integrada com a API DataJud do CNJ, oferecendo notificações multicanal e análise inteligente com IA.

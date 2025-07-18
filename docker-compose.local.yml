@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: direito_lux_staging
+      POSTGRES_USER: direito_lux
+      POSTGRES_PASSWORD: dev_password_123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile.cloudrun
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=direito_lux_staging
+      - DB_USER=direito_lux
+      - DB_PASSWORD=dev_password_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - JWT_SECRET=dev_jwt_secret_key_123
+      - PORT=8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  tenant-service:
+    build:
+      context: ./services/tenant-service
+      dockerfile: Dockerfile.cloudrun
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=direito_lux_staging
+      - DB_USER=direito_lux
+      - DB_PASSWORD=dev_password_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - PORT=8080
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8081/api/v1/auth
+      - NEXT_PUBLIC_TENANT_SERVICE_URL=http://localhost:8082/api/v1/tenants
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - tenant-service
+
+volumes:
+  postgres_data:

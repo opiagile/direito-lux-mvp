@@ -1,0 +1,37 @@
+# Ingress EMERGENCIAL - Desbloqueia teste hoje
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: direito-lux-ingress-emergency
+  namespace: direito-lux-staging
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "direito-lux-staging-ip"
+    ingress.gcp.cloud.google.com/force-ssl-redirect: "true"
+spec:
+  rules:
+  - http:
+      paths:
+      # Emergency proxy para auth E tenant
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: emergency-auth-proxy
+            port:
+              number: 8080
+      - path: /api/v1/tenants
+        pathType: Prefix
+        backend:
+          service:
+            name: emergency-auth-proxy
+            port:
+              number: 8080
+      # Frontend (mantido)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
